@@ -69,7 +69,6 @@ def compare_views(original_views, modified_views):
     :return: a dict with the added and updated views. In the case of updated will return the diff
         between the org_database and dst_database
     """
-    uchecked = list()
     pchecked = list()
     res = {
         'updated': list(),
@@ -85,7 +84,6 @@ def compare_views(original_views, modified_views):
                         'modified': view_modified['arch']
                     })
                 pchecked.append(index)
-                uchecked.append(uindex)
                 break
         else:
             res.get('added').append(view_modified)

@@ -29,6 +29,7 @@ TODO
 * [] Changes in the menus
 * [] Changes in translations
 * [] Changes in models
+* [] Tests
 
 
 Features
