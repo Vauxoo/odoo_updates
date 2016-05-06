@@ -5,6 +5,7 @@ import json
 import click
 from utils import PostgresConnector
 
+
 def jsonify(command, message):
     """
 

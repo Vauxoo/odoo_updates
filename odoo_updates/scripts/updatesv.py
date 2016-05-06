@@ -1,5 +1,5 @@
 import click
-import odoo_updates
+from .. import odoo_updates
 
 
 @click.group()
