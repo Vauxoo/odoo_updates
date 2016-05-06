@@ -27,7 +27,7 @@ def views(ctx):
 @click.pass_context
 def getall(ctx):
     states = dict()
-    views_states = odoo_updates.get_views_diff('apex80_production', 'apex80_updates_2')
+    views_states = odoo_updates.get_views_diff(ctx.obj['original'], ctx.obj['updated'])
     states.update({'views': views_states})
     message = odoo_updates.jsonify('getall', views_states)
 
