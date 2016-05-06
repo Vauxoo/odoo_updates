@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import psycopg2.extras
 import difflib
 import json
 import click
-
+from utils import PostgresConnector
 
 def jsonify(command, message):
     """
@@ -49,17 +48,13 @@ def get_views(database):
 
     """
     sql = """SELECT ir_model_data.module || '.' || ir_model_data.name xml_id, arch
-                FROM ir_model_data
-                JOIN ir_ui_view ON res_id = ir_ui_view.id
-                WHERE ir_model_data.model = 'ir.ui.view'
-                ORDER BY xml_id;"""
-    conn_string = "dbname='{database}'".format(database=database)
-    conn = psycopg2.connect(conn_string)
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute(sql)
-    res = copy_list_dicts(cursor)
-    cursor.close()
-    conn.close()
+        FROM ir_model_data
+        JOIN ir_ui_view ON res_id = ir_ui_view.id
+        WHERE ir_model_data.model = 'ir.ui.view'
+        ORDER BY xml_id;"""
+    with PostgresConnector({'dbname': database}) as conn:
+        cursor = conn.execute_select(sql)
+        res = copy_list_dicts(cursor)
     return res
 
 

@@ -1,0 +1,99 @@
+import psycopg2
+import psycopg2.extras
+from psycopg2 import OperationalError
+import logging
+
+
+logger = logging.getLogger('deployv')  # pylint: disable=C0103
+
+
+class PostgresConnector(object):
+    """ A simple helper to perform a postgres connection, execute simple sql sentences
+    """
+    __conn = None
+    __cursor = None
+    __allowed_keys = ['host', 'port', 'dbname', 'user', 'password']
+    __str_conn = ''
+
+    def __init__(self, config=None):
+        if config is None:
+            config = {}
+        for key, value in config.iteritems():
+            if value is not None and key in self.__allowed_keys:
+                self.__str_conn = '%s %s=%s' % (self.__str_conn, key, value)
+            elif key == 'dbname' and value is None:
+                self.__str_conn = '%s %s=%s' % (
+                    self.__str_conn, 'dbname', 'postgres')
+        logger.debug('Connection string: %s', self.__str_conn)
+        try:
+            logger.debug('Stabilishing connection with db server')
+            self.__conn = psycopg2.connect(self.__str_conn)
+            if config.get('isolation_level', False):
+                self.__conn.set_isolation_level(0)
+            self.__cursor = self.__conn.cursor(
+                cursor_factory=psycopg2.extras.DictCursor)
+        except Exception as e:
+            # TODO: log this then raise
+            logger.debug(
+                'Connection to database not established: %s', e.message)
+            # Proper cleanup
+            self.disconnect()
+            raise
+
+    def _execute(self, sql_str, *args):
+        try:
+            logger.debug('SQL: %s', sql_str)
+            self.__cursor.execute(sql_str, *args)
+        except Exception:
+            self.__conn.rollback()
+            raise
+        else:
+            self.__conn.commit()
+
+    def execute_select(self, sql_str, *args):
+        """ This method basically wraps *execute* cursor method from psycopg2,
+         see http://initd.org/psycopg/docs/usage.html#passing-parameters-to-sql-queries
+
+        :param sql_str: Sql to be executed
+        :param args: Args, all will be passed to
+            `cursor.execute <http://initd.org/psycopg/docs/cursor.html#cursor.execute>`_
+        :return: A dict if a select was performed, True if update/insert was success
+        """
+        self._execute(sql_str, args)
+        return self.__cursor
+
+    def execute_change(self, sql_str, *args):
+        self._execute(sql_str, args)
+        return True
+
+    def check_config(self):
+        """ Check if can connect to PostgreSQL server with the provided configuration
+
+        :return: True if success, False otherwise
+        """
+        try:
+            logger.debug('')
+            res = self.execute("select version();")
+            logger.debug('Postgres returned: %s', res)
+        except Exception as error:  # pylint: disable=W0703
+            logger.error('PostgreSQL connection test failed %s',
+                         error.message.strip())
+            return False
+        return True
+
+    def disconnect(self):
+        if self.__cursor:
+            logger.debug('disconnect: closing cursor')
+            self.__cursor.close()
+        if self.__conn:
+            logger.debug('disconnect: closing connection')
+            self.__conn.close()
+
+    def __del__(self):
+        self.disconnect()
+
+    def __exit__(self, type, value, traceback):  # pylint: disable=W0622
+        self.disconnect()
+
+    def __enter__(self):
+        return self
