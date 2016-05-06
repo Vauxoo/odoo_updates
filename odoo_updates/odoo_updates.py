@@ -59,12 +59,12 @@ def get_views(database):
     return res
 
 
-def compare_views(views_prod, views_updates):
+def compare_views(original_views, modified_views):
     """
     Compare all the views from views_prod with the views_updates and returns a proper report
 
-    :param views_prod: This would be the views from production database (a copy of course)
-    :param views_updates: This is are the views from the copy with
+    :param original_views: This would be the views from production database (a copy of course)
+    :param modified_views: This is are the views from the copy with
         all changes applied (-u all, -u app_module).
     :return: a dict with the added and updated views. In the case of updated will return the diff
         between the org_database and dst_database
@@ -72,40 +72,57 @@ def compare_views(views_prod, views_updates):
     uchecked = list()
     pchecked = list()
     res = {
-        'updated': dict(),
-        'added': dict()
+        'updated': list(),
+        'added': list()
     }
-    for uindex, view_updates in enumerate(views_updates):
-        for index, view_prod in enumerate(views_prod):
-            if view_prod['xml_id'] == view_updates['xml_id'] and index not in pchecked:
-                if view_prod['arch'] != view_updates['arch']:
-                    diff = difflib.unified_diff(
-                        view_prod['arch'].split('\n'),
-                        view_updates['arch'].split('\n')
-                    )
-                    res.get('updated').update({view_updates['xml_id']: '\n'.join(diff)})
+    for uindex, view_modified in enumerate(modified_views):
+        for index, view_original in enumerate(original_views):
+            if view_original['xml_id'] == view_modified['xml_id'] and index not in pchecked:
+                if view_original['arch'] != view_modified['arch']:
+                    res.get('updated').append({
+                        'xml_id': view_original['xml_id'],
+                        'original': view_original['arch'],
+                        'modified': view_modified['arch']
+                    })
                 pchecked.append(index)
                 uchecked.append(uindex)
                 break
         else:
-            res.get('added').update({view_updates['xml_id']: view_updates['arch']})
+            res.get('added').append(view_modified)
     return res
 
 
-def get_views_diff(org_database, dst_database):
-    views_prod = get_views(org_database)
-    views_updates = get_views(dst_database)
-    res = compare_views(views_prod, views_updates)
+def get_views_diff(original_database, modified_database):
+    """
+    Receive the databases names, get the views and return a dict with the original and
+        corresponding modified view in case of a modification or the new view in case of an
+        addition
+    :param original_database: The name of the unmodified database
+    :param modified_database: The name of the updated database
+    :return:
+    """
+    original_views = get_views(original_database)
+    modified_views = get_views(modified_database)
+    res = compare_views(original_views, modified_views)
     return res
 
 
 def diff_to_screen(views_states):
     for state, values in views_states.iteritems():
         click.secho('+ ' + state.title() + ' modules', fg='yellow')
-        for module, view in values.iteritems():
-            click.secho('+++ Module ' + module, fg='yellow')
-            for line in view.split('\n'):
+        for view in values:
+            if state == 'updated':
+                diff = difflib.unified_diff(
+                    view['original'].split('\n'),
+                    view['modified'].split('\n')
+                )
+            else:
+                diff = view['arch'].split('\\n')
+            click.secho('+++ Module ' + view['xml_id'], fg='yellow')
+            for line in diff:
                 if line.startswith('+'):
                     click.secho(line, fg='green')
                 elif line.startswith('-'):
                     click.secho(line, fg='red')
+                else:
+                    click.secho(line)
