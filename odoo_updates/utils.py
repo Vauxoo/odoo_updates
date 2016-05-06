@@ -1,6 +1,7 @@
+import boto3
+import logging
 import psycopg2
 import psycopg2.extras
-import logging
 
 
 logger = logging.getLogger('deployv')  # pylint: disable=C0103
@@ -96,3 +97,11 @@ class PostgresConnector(object):
 
     def __enter__(self):
         return self
+
+
+def send_message(message, queue_name, region):
+    session = boto3.Session()
+    sqs_client = session.client('sqs')
+    url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    response = sqs_client.send_message(QueueUrl=url, MessageBody=message, DelaySeconds=0)
+    return response
