@@ -20,7 +20,6 @@ def cli(ctx, original, updated, screen, queue, customer):
     ctx.obj['customer'] = customer
 
 
-
 @cli.command()
 @click.pass_context
 def views(ctx):
