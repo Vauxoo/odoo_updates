@@ -1,10 +1,47 @@
+# -*- coding: utf-8 -*-
+
 import boto3
 import logging
 import psycopg2
 import psycopg2.extras
-
+from datetime import datetime
+import json
 
 logger = logging.getLogger('deployv')  # pylint: disable=C0103
+
+
+def jsonify(states, command, customer_id):
+    """
+
+    :param command:
+    :param message:
+    :return:
+    """
+    message = {
+        'customer_id': customer_id,
+        'generated_at': datetime.now().strftime("%Y%m%d %H%M%S"),
+        'command': command,
+        'parameters': states
+    }
+
+    return json.dumps(message, indent=4, sort_keys=True)
+
+
+def copy_list_dicts(lines):
+    """
+    Convert a lazy cursor from psycopg2 to a list of dictionaries to reduce the access times
+    when a recurrent access is performed
+
+    :param lines: The psycopg2 cursor with the query result
+    :return: A list of dictionaries
+    """
+    res = list()
+    for line in lines:
+        dict_t = dict()
+        for keys in line.keys():
+            dict_t.update({keys: line[keys]})
+        res.append(dict_t.copy())
+    return res
 
 
 class PostgresConnector(object):

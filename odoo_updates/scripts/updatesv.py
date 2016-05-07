@@ -1,20 +1,24 @@
+# -*- coding: utf-8 -*-
+
 import click
-from os import getenv
 from .. import odoo_updates
-from ..utils import send_message
+from .. import utils
 
 
 @click.group()
 @click.option('--original', '-o', required=True)
 @click.option('--updated', '-u', required=True)
 @click.option('--screen', '-s', is_flag=True, default=False)
-@click.option('--queue', '-q', default=False)
+@click.option('--queue', '-q', envvar='AWS_BRANCH_QUEUE', default=False)
+@click.option('--customer', '-c', envvar='CUSTOMER', required=True)
 @click.pass_context
-def cli(ctx, original, updated, screen, queue):
+def cli(ctx, original, updated, screen, queue, customer):
     ctx.obj.update({'original': original})
     ctx.obj['updated'] = updated
     ctx.obj['screen'] = screen
-    ctx.obj['queue'] = queue if queue else getenv('AWS_BRANCH_QUEUE')
+    ctx.obj['queue'] = queue
+    ctx.obj['customer'] = customer
+
 
 
 @cli.command()
@@ -24,8 +28,8 @@ def views(ctx):
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(views_states, 'views')
     else:
-        message = odoo_updates.jsonify('views', views_states)
-        send_message(message, ctx.obj['queue'])
+        message = utils.jsonify(views_states, 'views', ctx.obj['customer'])
+        utils.send_message(message, ctx.obj['queue'])
 
 
 @cli.command()
@@ -35,8 +39,8 @@ def menus(ctx):
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(menus_states, 'menus')
     else:
-        message = odoo_updates.jsonify('menus', menus_states)
-        send_message(message, ctx.obj['queue'])
+        message = utils.jsonify(menus_states, 'menus', ctx.obj['customer'])
+        utils.send_message(message, ctx.obj['queue'])
 
 
 @cli.command()
@@ -48,7 +52,7 @@ def getall(ctx):
     # One for each command views, models, menus, translations, etc
     states.update({'views': views_states})
     states.update({'menus': menus_states})
-    message = odoo_updates.jsonify('getall', views_states)
-    send_message(message, ctx.obj['queue'])
+    message = utils.jsonify(states, 'getall', ctx.obj['customer'])
+    utils.send_message(message, ctx.obj['queue'])
 
 cli(obj={})

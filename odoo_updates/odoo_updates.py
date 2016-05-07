@@ -1,41 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import difflib
-import json
 import click
-from utils import PostgresConnector
-
-
-def jsonify(command, message):
-    """
-
-    :param command:
-    :param message:
-    :return:
-    """
-    res = dict()
-    res.update({
-        'command': command,
-        'params': message
-    })
-    return json.dumps(res, indent=4, sort_keys=True)
-
-
-def copy_list_dicts(lines):
-    """
-    Convert a lazy cursor from psycopg2 to a list of dictionaries to reduce the access times
-    when a recurrent access is performed
-
-    :param lines: The psycopg2 cursor with the query result
-    :return: A list of dictionaries
-    """
-    res = list()
-    for line in lines:
-        dict_t = dict()
-        for keys in line.keys():
-            dict_t.update({keys: line[keys]})
-        res.append(dict_t.copy())
-    return res
+from utils import PostgresConnector, copy_list_dicts
 
 
 def menu_tree(menu_id, database):
