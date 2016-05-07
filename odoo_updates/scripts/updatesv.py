@@ -22,9 +22,20 @@ def cli(ctx, original, updated, screen, queue):
 def views(ctx):
     views_states = odoo_updates.get_views_diff(ctx.obj['original'], ctx.obj['updated'])
     if ctx.obj['screen']:
-        odoo_updates.diff_to_screen(views_states)
+        odoo_updates.diff_to_screen(views_states, 'views')
     else:
         message = odoo_updates.jsonify('views', views_states)
+        send_message(message, ctx.obj['queue'])
+
+
+@cli.command()
+@click.pass_context
+def menus(ctx):
+    menus_states = odoo_updates.get_menus_diff(ctx.obj['original'], ctx.obj['updated'])
+    if ctx.obj['screen']:
+        odoo_updates.diff_to_screen(menus_states, 'menus')
+    else:
+        message = odoo_updates.jsonify('menus', menus_states)
         send_message(message, ctx.obj['queue'])
 
 
@@ -33,8 +44,10 @@ def views(ctx):
 def getall(ctx):
     states = dict()
     views_states = odoo_updates.get_views_diff(ctx.obj['original'], ctx.obj['updated'])
+    menus_states = odoo_updates.get_menus_diff(ctx.obj['original'], ctx.obj['updated'])
     # One for each command views, models, menus, translations, etc
     states.update({'views': views_states})
+    states.update({'menus': menus_states})
     message = odoo_updates.jsonify('getall', views_states)
     send_message(message, ctx.obj['queue'])
 

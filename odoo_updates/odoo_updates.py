@@ -38,6 +38,45 @@ def copy_list_dicts(lines):
     return res
 
 
+def menu_tree(menu_id, database):
+    sql = """
+    WITH RECURSIVE search_menu(id, parent_id, name, depth, hierarchypath) AS (
+    SELECT menu.id, menu.parent_id, menu.name, 1, ppmenu.name || '->' || menu.name as hierarchypath
+    FROM ir_ui_menu AS menu
+    JOIN ir_ui_menu AS ppmenu
+    ON menu.parent_id = ppmenu.id
+    UNION ALL
+        SELECT menu.id, menu.parent_id, menu.name, pmenu.depth + 1,
+            hierarchypath || '->' || menu.name
+        FROM ir_ui_menu as menu
+        JOIN search_menu as pmenu
+        ON menu.parent_id = pmenu.id
+    )
+    SELECT * FROM search_menu WHERE id = %s ORDER BY depth DESC LIMIT 1;
+    """
+    with PostgresConnector({'dbname': database}) as conn:
+        tree = conn.execute_select(sql, (menu_id,))
+        res = copy_list_dicts(tree)
+    return res[0]
+
+
+def get_menus(database):
+    sql = """SELECT ir_model_data.module || '.' || ir_model_data.name AS xml_id,
+                    res_id, ir_ui_menu.name
+                FROM ir_model_data
+                JOIN ir_ui_menu ON res_id = ir_ui_menu.id
+                WHERE ir_model_data.model = 'ir.ui.menu';  """
+    with PostgresConnector({'dbname': database}) as conn:
+        menus = conn.execute_select(sql)
+        menus = copy_list_dicts(menus)
+    res = dict()
+    for menu in menus:
+        res.update({
+            menu['xml_id']: menu
+        })
+    return res
+
+
 def get_views(database):
     """
     Select the views contents and xml_id from the specified database.
@@ -105,9 +144,47 @@ def get_views_diff(original_database, modified_database):
     return res
 
 
-def diff_to_screen(views_states):
+def get_menus_diff(original_database, modified_database):
+    original_menus = get_menus(original_database)
+    modified_menus = get_menus(modified_database)
+    res = {
+        'updated': list(),
+        'added': list(),
+        'deleted': list()
+    }
+
+    for uxml_id, urecord in modified_menus.iteritems():
+        if uxml_id in original_menus \
+                and original_menus[uxml_id]['name'] != urecord['name']:
+            menu = menu_tree(urecord['res_id'], modified_database)
+            res['updated'].append({
+                'xml_id': uxml_id,
+                'original': original_menus[uxml_id]['name'],
+                'modified': urecord['name'],
+                'hierarchypath': menu['hierarchypath']
+            })
+        if uxml_id not in original_menus:
+            menu = menu_tree(urecord['res_id'], modified_database)
+            res['added'].append({
+                'xml_id': uxml_id,
+                'name': urecord['name'],
+                'hierarchypath': menu['hierarchypath']
+            })
+    for pxml_id, precord in original_menus.iteritems():
+        if pxml_id not in modified_menus:
+            menu = menu_tree(precord['res_id'], original_database)
+            res['deleted'].append({
+                'xml_id': precord['xml_id'],
+                'name': precord['name'],
+                'hierarchypath': menu['hierarchypath']
+            })
+
+    return res
+
+
+def diff_to_screen(views_states, title):
     for state, values in views_states.iteritems():
-        click.secho('+ ' + state.title() + ' modules', fg='yellow')
+        click.secho('+ {state} {title}'.format(state=state.title(), title=title), fg='yellow')
         for view in values:
             if state == 'updated':
                 diff = difflib.unified_diff(
@@ -115,8 +192,12 @@ def diff_to_screen(views_states):
                     view['modified'].split('\n')
                 )
             else:
-                diff = view['arch'].split('\\n')
-            click.secho('+++ Module ' + view['xml_id'], fg='yellow')
+                diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
+            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=view['xml_id']),
+                        fg='yellow')
+            if 'hierarchypath' in view:
+                click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
+                            fg='yellow')
             for line in diff:
                 if line.startswith('+'):
                     click.secho(line, fg='green')

@@ -99,7 +99,7 @@ class PostgresConnector(object):
         return self
 
 
-def send_message(message, queue_name, region):
+def send_message(message, queue_name):
     session = boto3.Session()
     sqs_client = session.client('sqs')
     url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
