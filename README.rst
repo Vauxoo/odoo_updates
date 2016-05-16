@@ -25,10 +25,11 @@ Most of the functionality are still to be defined. If you have any suggestion/is
 
 TODO
 ----
-* [] Changes in the views
-* [] Changes in the menus
+* [X] Changes in the views
+* [X] Changes in the menus
 * [] Changes in translations
 * [] Changes in models
+* [] Tests
 
 
 Features
