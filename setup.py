@@ -32,6 +32,7 @@ setup(
     url='https://github.com/ruiztulio/odoo_updates',
     packages=[
         'odoo_updates',
+        'odoo_updates.scripts'
     ],
     package_dir={'odoo_updates':
                  'odoo_updates'},
