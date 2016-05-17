@@ -64,6 +64,21 @@ def get_views(database):
         res = copy_list_dicts(cursor)
     return res
 
+def get_translations(database):
+    """
+    Select the translation values, ids, translated fields name and modules that contain those fields
+    from the specified database. The translation value is needed to compare the different translations
+    from different database, the id is to make sure we are comparing the same translated field of both
+    databases and the translated field name and modules are just to display more information.
+
+    :param database: database name to query on
+    :return: List of dicts with the information obtained from the database
+    """
+    with PostgresConnector({'dbname': database}) as conn:
+        cursor = conn.execute_select("""SELECT value,id,name,module FROM ir_translation""")
+        res = copy_list_dicts(cursor)
+    return res
+
 
 def compare_views(original_views, modified_views):
     """
@@ -95,6 +110,48 @@ def compare_views(original_views, modified_views):
             res.get('added').append(view_modified)
     return res
 
+def compare_translations(original_translations, modified_translations):
+    """
+    Compare all the translated fields from two databases and returns a proper report
+
+    :param original_translations: The translations contained in the production database (copy of course).
+    :param modified_translations: The translations contained in the updates database with all the changes
+        that will be applied in the production database.
+    :return: A dict with the added, updated and removed translations between the production database and
+        the updates database.
+    """
+    checked = list()
+    res = {
+        'updated': list(),
+        'added': list(),
+        'deleted': list()
+    }
+    for modified_translation in modified_translations:
+        for original_translation in original_translations:
+            if original_translation['id'] == modified_translation['id']:
+                checked.append(original_translation)
+                if original_translation['value'] != modified_translation['value']:
+                    res.get('updated').append({
+                        'name': original_translation['name'],
+                        'module': original_translation['module'],
+                        'original': original_translation['value'],
+                        'modified': modified_translation['value']
+                    })
+                break
+        else:
+            res.get('added').append({
+                'name': modified_translation['name'],
+                'module': modified_translation['module'],
+                'value': modified_translation['value']
+            })
+    for original_translation in original_translations:
+        if original_translation not in checked:
+            res.get('deleted').append({
+                'name': original_translation['name'],
+                'module': original_translation['module'],
+                'value': original_translation['value'],
+            })
+    return res
 
 def get_views_diff(original_database, modified_database):
     """
@@ -108,6 +165,20 @@ def get_views_diff(original_database, modified_database):
     original_views = get_views(original_database)
     modified_views = get_views(modified_database)
     res = compare_views(original_views, modified_views)
+    return res
+
+def get_translations_diff(original_database, modified_database):
+    """
+    Receive the databases names, get the translations and return a dict with the added,
+    modified and removed translations.
+
+    :param original_database: The name of the unmodified database.
+    :param modified_database: The name of the updated database.
+    :return: dict with the added, modified and removed translations.
+    """
+    original_translations = get_translations(original_database)
+    modified_translations = get_translations(modified_database)
+    res = compare_translations(original_translations, modified_translations)
     return res
 
 
@@ -158,9 +229,11 @@ def diff_to_screen(views_states, title):
                     view['original'].split('\n'),
                     view['modified'].split('\n')
                 )
+            elif title == 'Translations':
+                diff = view.get('value').split('\\n')
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
-            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=view['xml_id']),
+            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=view.get('xml_id' if 'xml_id' in view else 'name')),
                         fg='yellow')
             if 'hierarchypath' in view:
                 click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
