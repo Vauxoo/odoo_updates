@@ -86,11 +86,13 @@ def getall(ctx):
     translation_states = odoo_updates.get_translations_diff(ctx.obj['original'],
                                                             ctx.obj['updated'])
     branches_info = odoo_updates.get_branches()
+    fields_states = odoo_updates.get_fields_diff(ctx.obj['original'], ctx.obj['updated'])
     # One for each command views, models, menus, translations, etc
     states.update({'views': views_states})
     states.update({'menus': menus_states})
     states.update({'branches': branches_info})
     states.update({'translations': translation_states})
+    states.update({'fields': fields_states})
     message = utils.jsonify(states, 'getall', ctx.obj['customer'])
     utils.send_message(message, ctx.obj['queue'])
 

@@ -93,6 +93,37 @@ def get_translations(database):
     """
     with PostgresConnector({'dbname': database}) as conn:
         cursor = conn.execute_select("""SELECT value,id,name,module FROM ir_translation""")
+
+
+def get_fields(database):
+    """
+    Selection fields model , name , field_description, ttype, relation,
+    relation_field to create a list of fields and their values
+    :param database: database name to query on
+    :return: List of dicts with the information get from database.
+     List of dicts With the information get from the database as follows
+     {'model': model ('ir.model'),
+      'name': field ('field_id'),
+      'field_description': description ('Fields')
+      'ttype': data type ('integer')
+      'relation': model relation ('ir.model.fields')
+      'relation_field': realation field ('model_id')
+      ,}
+     model: Column having the model name
+     name: A column that has the name of the model fields
+     field_description: column that has the description of the model fields
+     ttype: column that has the data type of model fields
+     relation: A column that has the relationship of the field with
+               another model if you do not have this in None
+     relation_field: Column field has the name of another model that
+                     makes relationship if you do not have this in None
+    """
+    sql = """
+          select model, name, field_description, ttype, relation,
+          relation_field from ir_model_fields;
+          """
+    with PostgresConnector({'dbname': database}) as conn:
+        cursor = conn.execute_select(sql)
         res = copy_list_dicts(cursor)
     return res
 
@@ -168,6 +199,110 @@ def compare_translations(original_translations, modified_translations):
                 'module': original_translation['module'],
                 'value': original_translation['value'],
             })
+    return res
+
+def compare_fields(original_fields, modified_fields):
+    """
+    compares the fields of tables in a database and returns the direfencias
+    :param original_fields: This would be the fields from the point of
+     view of production database
+    :modified_fields: This are the changes made in the fields of
+    the database, the argument after the -u (-u all, -u app_module).
+    :return: a dict with the added, updated and deleted fields.
+    In the case of updated will return the diff between the org_database
+    and dst_database
+    {'updated': [{'model': Model name database ,
+                  'name': field name,
+                  'original': unchange in the properties of a field can be,
+                              field_description, ttype, relation,
+                              relation_field... etc
+                  'modified': change in the properties of a field can be,
+                              values of field_description, ttype,
+                              relation, relation_field... etc,
+                  'column': name of property (field_description,
+                            ttype... etc),
+                   }]
+    {'added': [{'model': Model name database ,
+                  'name': field name,
+                  'column': name of property (field_description,
+                            ttype... etc),
+                  'values': added value of the property
+                   }]
+    {'deleted': [{'model': Model name database ,
+                  'name': field name,
+                  'column': name of property (field_description,
+                            ttype... etc),
+                  'values': deleted value of the property
+                   }]
+    }
+    """
+    def create_structure_model(records):
+        struct = {}
+        for rcd in records:
+            struct[rcd['model']] = []
+        for rcd in records:
+            struct[rcd['model']].append(rcd['name'])
+        return struct
+    res = {
+        'updated': list(),
+        'added': list(),
+        'deleted': list(),
+    }
+    checked = {'original': create_structure_model(original_fields),
+               'modified': create_structure_model(modified_fields)}
+    for modified in modified_fields:
+        for original in original_fields:
+            if modified['model'] == original['model']:
+                for column, values in modified.iteritems():
+                    name = "{model},{name}".\
+                        format(model=original['model'],
+                               name=original['name'])
+                    if values != original[column] and modified['name']\
+                            == original['name']:
+                            res.get('updated').append({
+                                'model': original['model'],
+                                'name': name,
+                                'original': original[column],
+                                'modified': modified[column],
+                                'column': column,
+                                })
+    for modified in modified_fields:
+        if modified['model'] in checked['original'] and modified['name']\
+                not in checked['original'][modified['model']] or \
+                modified['model'] not in checked['original']:
+            for column, values in modified.iteritems():
+                name = "{model},{name}".\
+                    format(model=modified['model'],
+                           name=modified['name'])
+                if values and column not in ['model', 'name']:
+                    res.get('added').append({
+                        'model': modified['model'],
+                        'name': name,
+                        'column': column,
+                        'value': values,
+                        })
+    for original in original_fields:
+        if original['model'] in checked['modified'] and \
+            original['name'] not in checked['modified'][original['model']]\
+                or original['model'] not in checked['modified']:
+            for column, values in original.iteritems():
+                name = "{model},{name}".\
+                    format(model=original['model'],
+                           name=original['name'])
+                if values and column not in ['model', 'name']:
+                    res.get('deleted').append({
+                        'model': original['model'],
+                        'name': name,
+                        'column': column,
+                        'value': values,
+                        })
+    return res
+
+
+def get_fields_diff(original_database, modified_database):
+    original_fields = get_fields(original_database)
+    modified_fields = get_fields(modified_database)
+    res = compare_fields(original_fields, modified_fields)
     return res
 
 
@@ -248,6 +383,8 @@ def diff_to_screen(views_states, title):
                     view['modified'].split('\n')
                 )
             elif title == 'Translations':
+                 diff = view.get('value').split('\\n')
+            elif title == 'Fields':
                 diff = view.get('value').split('\\n')
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
@@ -257,6 +394,14 @@ def diff_to_screen(views_states, title):
             if 'hierarchypath' in view:
                 click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
                             fg='yellow')
+            if 'column' in view:
+                column = view.get('column', '')
+                if 'field' in column:
+                    column = column.replace("_", ' ')
+                else:
+                    column = "field {value}".format(value=column)
+                click.secho('++++ {column}'.format(column=column),
+
             for line in diff:
                 if line.startswith('+'):
                     click.secho(line, fg='green')
