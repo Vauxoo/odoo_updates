@@ -67,6 +67,18 @@ def translations(ctx):
 
 @cli.command()
 @click.pass_context
+def fields(ctx):
+    fields_states = odoo_updates.get_fields_diff(ctx.obj['original'],
+                                                 ctx.obj['updated'])
+    if ctx.obj['screen']:
+        odoo_updates.diff_to_screen(fields_states, 'Fields')
+    else:
+        message = utils.jsonify(fields_states, 'fields', ctx.obj['customer'])
+        utils.send_message(message, ctx.obj['queue'])
+
+
+@cli.command()
+@click.pass_context
 def getall(ctx):
     states = dict()
     views_states = odoo_updates.get_views_diff(ctx.obj['original'], ctx.obj['updated'])
