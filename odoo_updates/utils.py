@@ -137,7 +137,7 @@ class PostgresConnector(object):
 
 
 def send_message(message, queue_name):
-    resource = boto3.resource('sqs')
+    resource = boto3.resource('sqs', region_name='us-east-1')
     queue = resource.get_queue_by_name(QueueName=queue_name)
     response = queue.send_message(MessageBody=message)
     return response

@@ -48,7 +48,7 @@ def branches(ctx):
     if ctx.obj['screen']:
         odoo_updates.branches_to_screen(branches)
     else:
-        message = utils.jsonify(branches, 'branches')
+        message = utils.jsonify(branches, 'branches', ctx.obj['customer'])
         utils.send_message(message, ctx.obj['queue'])
 
 

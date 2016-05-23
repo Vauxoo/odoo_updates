@@ -4,6 +4,7 @@ import difflib
 import click
 import os
 from utils import PostgresConnector, copy_list_dicts
+import json
 import shlex
 import spur
 
@@ -69,7 +70,9 @@ def get_views(database):
 
 def get_branches():
     json_filename = '/tmp/branches.json'
-    command = os.expanduser('python ~/backupws/branches.py -s -p instance/ -f {name}'.format(name=json_filename))
+    branches_file = os.path.expanduser('~/backupws/branches.py')
+    command = 'python {branches} -s -p instance/ -f {name}'.format(name=json_filename,
+                                                                   branches=branches_file)
     shell = spur.LocalShell()
     shell.run(shlex.split(command))
     with open(json_filename, "r") as dest:
