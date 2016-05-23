@@ -2,7 +2,10 @@
 
 import difflib
 import click
+import os
 from utils import PostgresConnector, copy_list_dicts
+import shlex
+import spur
 
 
 def menu_tree(menu_id, database):
@@ -63,6 +66,15 @@ def get_views(database):
         cursor = conn.execute_select(sql)
         res = copy_list_dicts(cursor)
     return res
+
+def get_branches():
+    json_filename = '/tmp/branches.json'
+    command = os.expanduser('python ~/backupws/branches.py -s -p instance/ -f {name}'.format(name=json_filename))
+    shell = spur.LocalShell()
+    shell.run(shlex.split(command))
+    with open(json_filename, "r") as dest:
+        branches = json.load(dest)
+    return branches
 
 
 def compare_views(original_views, modified_views):
@@ -172,3 +184,10 @@ def diff_to_screen(views_states, title):
                     click.secho(line, fg='red')
                 else:
                     click.secho(line)
+
+def branches_to_screen(branches):
+    click.echo('Repositories:\n')
+    for branch in branches:
+        for key, value in branch.iteritems():
+            click.echo('{key}: {value}'.format(key=key, value=value))
+        click.echo('\n')
