@@ -191,6 +191,9 @@ def diff_to_screen(views_states, title):
 def branches_to_screen(branches):
     click.echo('Repositories:\n')
     for branch in branches:
-        for key, value in branch.iteritems():
-            click.echo('{key}: {value}'.format(key=key, value=value))
+        click.echo('{path}'.format(path=branch['path'], fg='yellow'))
+        click.echo('{repo} {branch}'.format(branch=branch['branch'], repo=branch['name']))
+        click.echo('{commit}'.format(path=branch['commit']))
+        for remote, url in branch['repo_url'].iteritems():
+            click.echo('{remote}: {url}'.format(url=url, remote=remote))
         click.echo('\n')
