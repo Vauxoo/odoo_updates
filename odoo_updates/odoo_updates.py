@@ -254,14 +254,11 @@ def compare_fields(original_fields, modified_fields):
         for original in original_fields:
             if modified['model'] == original['model']:
                 for column, values in modified.iteritems():
-                    name = "{model},{name}".\
-                        format(model=original['model'],
-                               name=original['name'])
                     if values != original[column] and modified['name']\
                             == original['name']:
                             res.get('updated').append({
                                 'model': original['model'],
-                                'name': name,
+                                'name': original['name'],
                                 'original': original[column],
                                 'modified': modified[column],
                                 'column': column,
@@ -271,13 +268,10 @@ def compare_fields(original_fields, modified_fields):
                 not in checked['original'][modified['model']] or \
                 modified['model'] not in checked['original']:
             for column, values in modified.iteritems():
-                name = "{model},{name}".\
-                    format(model=modified['model'],
-                           name=modified['name'])
                 if values and column not in ['model', 'name']:
                     res.get('added').append({
                         'model': modified['model'],
-                        'name': name,
+                        'name': modified['name'],
                         'column': column,
                         'value': values,
                         })
@@ -286,13 +280,10 @@ def compare_fields(original_fields, modified_fields):
             original['name'] not in checked['modified'][original['model']]\
                 or original['model'] not in checked['modified']:
             for column, values in original.iteritems():
-                name = "{model},{name}".\
-                    format(model=original['model'],
-                           name=original['name'])
                 if values and column not in ['model', 'name']:
                     res.get('deleted').append({
                         'model': original['model'],
-                        'name': name,
+                        'name': original['name'],
                         'column': column,
                         'value': values,
                         })
@@ -374,6 +365,7 @@ def get_menus_diff(original_database, modified_database):
 
 
 def diff_to_screen(views_states, title):
+    show_field_model = {}
     for state, values in views_states.iteritems():
         click.secho('+ {state} {title}'.format(state=state.title(), title=title), fg='yellow')
         for view in values:
@@ -388,9 +380,26 @@ def diff_to_screen(views_states, title):
                 diff = view.get('value').split('\\n')
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
-            xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
-            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
-                        fg='yellow')
+                xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
+                click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
+                           fg='yellow')
+            if title == 'Fields':
+                if view['model'] not in show_field_model:
+                    show_field_model[view['model']] = []
+                    click.secho('+++ {title}: {model}'.
+                                format(title='Model',
+                                       model=view.get('model')),
+                                fg='yellow')
+                if view['name'] not in show_field_model[view['model']]:
+                    show_field_model[view['model']].append(view['name'])
+                    click.secho('+++ {title}: {name}'.
+                                format(title='Field', name=view.get('name')),
+                                fg='yellow')
+            else:
+                click.secho('+++ {title} {xml_id}'.format(title=title,
+                            xml_id=view.get('xml_id' if 'xml_id'
+                                            in view else 'name')),
+                            fg='yellow')
             if 'hierarchypath' in view:
                 click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
                             fg='yellow')
