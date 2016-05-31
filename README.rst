@@ -27,7 +27,7 @@ TODO
 ----
 * [X] Changes in the views
 * [X] Changes in the menus
-* [] Changes in translations
+* [X] Changes in translations
 * [] Changes in models
 * [] Tests
 
