@@ -2,7 +2,11 @@
 
 import difflib
 import click
+import os
 from utils import PostgresConnector, copy_list_dicts
+import json
+import shlex
+import spur
 
 
 def menu_tree(menu_id, database):
@@ -63,6 +67,19 @@ def get_views(database):
         cursor = conn.execute_select(sql)
         res = copy_list_dicts(cursor)
     return res
+
+
+def get_branches():
+    json_filename = '/tmp/branches.json'
+    branches_file = os.path.expanduser('~/backupws/branches.py')
+    command = 'python {branches} -s -p instance/ -f {name}'.format(name=json_filename,
+                                                                   branches=branches_file)
+    shell = spur.LocalShell()
+    shell.run(shlex.split(command))
+    with open(json_filename, "r") as dest:
+        branches = json.load(dest)
+    return branches
+
 
 def get_translations(database):
     """
@@ -245,3 +262,13 @@ def diff_to_screen(views_states, title):
                     click.secho(line, fg='red')
                 else:
                     click.secho(line)
+
+def branches_to_screen(branches):
+    click.echo('Repositories:\n')
+    for branch in branches:
+        click.secho('{path}'.format(path=branch['path']), fg='yellow')
+        click.echo('{repo} {branch}'.format(branch=branch['branch'], repo=branch['name']))
+        click.echo('commit: {commit}'.format(commit=branch['commit']))
+        for remote, url in branch['repo_url'].iteritems():
+            click.echo('{remote}: {url}'.format(url=url, remote=remote))
+        click.echo('\n')
