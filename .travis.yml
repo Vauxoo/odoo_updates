@@ -1,21 +1,28 @@
-# Config file for automatic testing at travis-ci.org
-# This file will be regenerated if you run travis_pypi_setup.py
-
 language: python
-python: 3.5
+python: 2.7
 
 env:
-  - TOXENV=py35
-  - TOXENV=py34
-  - TOXENV=py33
-  - TOXENV=py27
-  - TOXENV=py26
-  - TOXENV=pypy
+  matrix:
+    - LINT_CHECK="1"
+    - TESTS="1"
 
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox
+before_install:
+  - psql -c "CREATE DATABASE tests"
 
-# command to run tests, e.g. python setup.py test
-script: tox
+addons:
+  postgresql: "9.3"
 
+install:
+  - pip install --upgrade pip
+  - pip install .
+  - pip install -r test-requirements.txt
+  - pip install -r requirements.txt
+  - wget https://raw.githubusercontent.com/Vauxoo/pylint-conf/master/conf/pylint_vauxoo_light.cfg
+  - sed --in-place '/^\s*#.*$/d' pylint_vauxoo_light.cfg
 
+script:
+  - if [ "${LINT_CHECK}" = "1" ]; then pylint odoo_updates --rcfile=pylint_vauxoo_light.cfg; fi
+  - if [ "${TESTS}" = "1" ]; then coverage run setup.py test; fi
+
+after_success:
+  if [ "${TESTS}" = "1" ]; then coveralls; fi
