@@ -91,13 +91,13 @@ ALTER TABLE ir_ui_view OWNER TO postgres;
 --
 
 COPY ir_model_data (name, model, res_id, module) FROM stdin;
-test_model_1    ir.ui.menu  1   test_module
-test_model_2    ir.ui.menu  2   test_module
-test_model_3    ir.ui.menu  3   test_module
-test_model_4    ir.ui.menu  4   test_module
-test_model_5    ir.ui.view  5   test_module
-test_model_6    ir.ui.view  6   test_module
-test_model_7    ir.ui.view  7   test_module
+test_model_1	ir.ui.menu	1	test_module
+test_model_2	ir.ui.menu	2	test_module
+test_model_3	ir.ui.menu	3	test_module
+test_model_4	ir.ui.menu	4	test_module
+test_model_5	ir.ui.view	5	test_module
+test_model_6	ir.ui.view	6	test_module
+test_model_7	ir.ui.view	7	test_module
 \.
 
 
@@ -106,8 +106,8 @@ test_model_7    ir.ui.view  7   test_module
 --
 
 COPY ir_translation (value, id, name, module) FROM stdin;
-modified translation number one 1   name    test_module
-added translation   3   name    test_module
+modified translation number one	1	name	test_module
+added translation	3	name	test_module
 \.
 
 
@@ -116,9 +116,9 @@ added translation   3   name    test_module
 --
 
 COPY ir_ui_menu (name, id, parent_id) FROM stdin;
-modified_test_menu  1   2
-test_menu_2 2   \N
-test_menu_4 4   2
+modified_test_menu	1	2
+test_menu_2	2	\N
+test_menu_4	4	2
 \.
 
 
@@ -127,8 +127,8 @@ test_menu_4 4   2
 --
 
 COPY ir_ui_view (arch, id) FROM stdin;
-<form><field name="full name"/><field name="surname"/><field name="age"/></form>    5
-<form><field name="name2"/><field name="updated"/><field name="description"/></tree>    7
+<form><field name="full name"/><field name="surname"/><field name="age"/></form>	5
+<form><field name="name2"/><field name="updated"/><field name="description"/></tree>	7
 \.
 
 
@@ -145,3 +145,4 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
+
