@@ -1,0 +1,16 @@
+oerplib
+semantic_version
+bzr
+pylint
+flake8
+unittest2
+tox
+pytest
+coveralls
+strict-rfc3339
+simplejson
+spur
+psycopg2
+configargparse
+gitpython
+docker-py
