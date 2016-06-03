@@ -10,7 +10,7 @@ before_install:
   - psql -c "CREATE DATABASE tests"
   - psql -c "CREATE DATABASE test_original"
   - psql -c "CREATE DATABASE test_updated"
-  - git clone https://github.com/ruiztulio/backupws.git ${HOME}/bacupws
+  - git clone https://github.com/ruiztulio/backupws.git ${HOME}/backupws
   - git clone https://github.com/ruiztulio/backupws.git ${HOME}/instance
 
 addons:
@@ -21,6 +21,7 @@ install:
   - pip install .
   - pip install -r test-requirements.txt
   - pip install -r requirements.txt
+  - pip install -r ${HOME}/backupws/requirements.txt
   - wget https://raw.githubusercontent.com/Vauxoo/pylint-conf/master/conf/pylint_vauxoo_light.cfg
   - sed --in-place '/^\s*#.*$/d' pylint_vauxoo_light.cfg
 
