@@ -9,8 +9,8 @@ class TestOdooUpdates(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.shell = spur.LocalShell()
-        cls.shell.run(shlex.split('psql test_original -f original_test_db.sql'))
-        cls.shell.run(shlex.split('psql test_updated -f updated_test_db.sql'))
+        cls.shell.run(shlex.split('psql test_original -f tests/files/original_test_db.sql'))
+        cls.shell.run(shlex.split('psql test_updated -f tests/files/updated_test_db.sql'))
 
     def test_01_menu_tree(self):
         res = odoo_updates.menu_tree(1, 'test_original')
