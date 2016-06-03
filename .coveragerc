@@ -1,0 +1,8 @@
+[report]
+include =
+    */odoo_updates/*
+    */odoo_updates/scripts/*
+
+omit =
+    */.eggs/*
+    */setup.py
