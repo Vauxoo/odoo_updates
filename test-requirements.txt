@@ -7,3 +7,4 @@ pytest
 coveralls
 simplejson
 spur
+bzr
