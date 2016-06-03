@@ -8,6 +8,10 @@ env:
 
 before_install:
   - psql -c "CREATE DATABASE tests"
+  - psql -c "CREATE DATABASE test_original"
+  - psql -c "CREATE DATABASE test_updated"
+  - git clone https://github.com/ruiztulio/backupws.git ${HOME}/bacupws
+  - git clone https://github.com/ruiztulio/backupws.git ${HOME}/instance
 
 addons:
   postgresql: "9.3"

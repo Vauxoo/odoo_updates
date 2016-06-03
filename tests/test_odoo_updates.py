@@ -2,28 +2,15 @@ from unittest2 import TestCase
 from odoo_updates import odoo_updates
 import shlex
 import spur
-import os
 
 
 class TestOdooUpdates(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.home = os.path.expanduser('~')
         cls.shell = spur.LocalShell()
-        cls.shell.run(shlex.split('cp tests/files/original_test_db.sql .'))
-        cls.shell.run(shlex.split('cp tests/files/updated_test_db.sql .'))
-        cls.shell.run(shlex.split('createdb test_original'))
-        cls.shell.run(shlex.split('createdb test_updated'))
         cls.shell.run(shlex.split('psql test_original -f original_test_db.sql'))
         cls.shell.run(shlex.split('psql test_updated -f updated_test_db.sql'))
-        cmd = 'git clone https://github.com/ruiztulio/backupws.git {home}/backupws'\
-            .format(home=cls.home)
-        cls.shell.run(shlex.split(cmd))
-        os.mkdir('{home}/instance'.format(home=cls.home))
-        cmd = 'git clone https://github.com/ruiztulio/backupws.git {home}/instance/repo'\
-            .format(home=cls.home)
-        cls.shell.run(shlex.split(cmd))
 
     def test_01_menu_tree(self):
         res = odoo_updates.menu_tree(1, 'test_original')
@@ -164,7 +151,3 @@ class TestOdooUpdates(TestCase):
     def test_99_cleanup(self):
         self.shell.run(shlex.split('dropdb test_original'))
         self.shell.run(shlex.split('dropdb test_updated'))
-        self.shell.run(shlex.split('rm original_test_db.sql'))
-        self.shell.run(shlex.split('rm updated_test_db.sql'))
-        self.shell.run(shlex.split('rm -rf {home}/instance {home}/backupws'
-                                   .format(home=self.home)))
