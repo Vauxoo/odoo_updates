@@ -45,18 +45,19 @@ def menus(ctx):
 @cli.command()
 @click.pass_context
 def branches(ctx):
-    branches = odoo_updates.get_branches()
+    branches_info = odoo_updates.get_branches()
     if ctx.obj['screen']:
-        odoo_updates.branches_to_screen(branches)
+        odoo_updates.branches_to_screen(branches_info)
     else:
-        message = utils.jsonify(branches, 'branches', ctx.obj['customer'])
+        message = utils.jsonify(branches_info, 'branches', ctx.obj['customer'])
         utils.send_message(message, ctx.obj['queue'])
 
 
 @cli.command()
 @click.pass_context
 def translations(ctx):
-    translation_states = odoo_updates.get_translations_diff(ctx.obj['original'], ctx.obj['updated'])
+    translation_states = odoo_updates.get_translations_diff(ctx.obj['original'],
+                                                            ctx.obj['updated'])
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(translation_states, 'Translations')
     else:
@@ -70,12 +71,13 @@ def getall(ctx):
     states = dict()
     views_states = odoo_updates.get_views_diff(ctx.obj['original'], ctx.obj['updated'])
     menus_states = odoo_updates.get_menus_diff(ctx.obj['original'], ctx.obj['updated'])
-    translation_states = odoo_updates.get_translations_diff(ctx.obj['original'], ctx.obj['updated'])
-    branches = odoo_updates.get_branches()
+    translation_states = odoo_updates.get_translations_diff(ctx.obj['original'],
+                                                            ctx.obj['updated'])
+    branches_info = odoo_updates.get_branches()
     # One for each command views, models, menus, translations, etc
     states.update({'views': views_states})
     states.update({'menus': menus_states})
-    states.update({'branches': branches})
+    states.update({'branches': branches_info})
     states.update({'translations': translation_states})
     message = utils.jsonify(states, 'getall', ctx.obj['customer'])
     utils.send_message(message, ctx.obj['queue'])
