@@ -93,6 +93,8 @@ def get_translations(database):
     """
     with PostgresConnector({'dbname': database}) as conn:
         cursor = conn.execute_select("""SELECT value,id,name,module FROM ir_translation""")
+        res = copy_list_dicts(cursor)
+    return res
 
 
 def get_fields(database):
@@ -277,8 +279,8 @@ def compare_fields(original_fields, modified_fields):
                         })
     for original in original_fields:
         if original['model'] in checked['modified'] and \
-            original['name'] not in checked['modified'][original['model']]\
-                or original['model'] not in checked['modified']:
+           original['name'] not in checked['modified'][original['model']]\
+           or original['model'] not in checked['modified']:
             for column, values in original.iteritems():
                 if values and column not in ['model', 'name']:
                     res.get('deleted').append({
@@ -393,7 +395,7 @@ def diff_to_screen(views_states, title):
                 if view['name'] not in show_field_model[view['model']]:
                     show_field_model[view['model']].append(view['name'])
                     click.secho('+++ {title}: {name}'.
-                                format(title='Field', name=view.get('name')),
+                                format(title='Field name', name=view.get('name')),
                                 fg='yellow')
             else:
                 click.secho('+++ {title} {xml_id}'.format(title=title,
@@ -410,7 +412,7 @@ def diff_to_screen(views_states, title):
                 else:
                     column = "field {value}".format(value=column)
                 click.secho('++++ {column}'.format(column=column),
-
+                            fg='yellow')
             for line in diff:
                 if line.startswith('+'):
                     click.secho(line, fg='green')
