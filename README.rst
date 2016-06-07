@@ -5,12 +5,16 @@ Odoo Updates
 .. image:: https://img.shields.io/pypi/v/odoo_updates.svg
         :target: https://pypi.python.org/pypi/odoo_updates
 
-.. image:: https://img.shields.io/travis/ruiztulio/odoo_updates.svg
-        :target: https://travis-ci.org/ruiztulio/odoo_updates
+.. image:: https://img.shields.io/travis/Vauxoo/odoo_updates.svg
+        :target: https://travis-ci.org/Vauxoo/odoo_updates
 
 .. image:: https://readthedocs.org/projects/odoo_updates/badge/?version=latest
         :target: https://readthedocs.org/projects/odoo_updates/?badge=latest
         :alt: Documentation Status
+
+.. image:: https://coveralls.io/repos/github/Vauxoo/odoo_updates/badge.svg?branch=master 
+        :target: https://coveralls.io/github/Vauxoo/odoo_updates?branch=master
+        :alt: Coverage Status
 
 
 A few scripts packaged that get all changes to be applied into an Odoo database.
@@ -29,7 +33,7 @@ TODO
 * [X] Changes in the menus
 * [X] Changes in translations
 * [] Changes in models
-* [] Tests
+* [X] Tests
 
 
 Features
