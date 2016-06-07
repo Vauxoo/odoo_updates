@@ -12,6 +12,10 @@ Odoo Updates
         :target: https://readthedocs.org/projects/odoo_updates/?badge=latest
         :alt: Documentation Status
 
+.. image:: https://coveralls.io/repos/github/Vauxoo/odoo_updates/badge.svg?branch=master 
+        :target: https://coveralls.io/github/Vauxoo/odoo_updates?branch=master
+        :alt: Coverage Status
+
 
 A few scripts packaged that get all changes to be applied into an Odoo database.
 
