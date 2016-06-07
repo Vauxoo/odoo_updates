@@ -8,3 +8,4 @@ coveralls
 simplejson
 spur
 bzr
+jsonschema

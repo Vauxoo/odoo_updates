@@ -1,0 +1,57 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties":{
+        "deleted":{
+            "type": "array",
+            "properties":{
+                "hierarchypath": {"type": "string"},
+                "xml_id": {"type": "string"},
+                "name": {"type": "string"},
+                "value": {"type": "string"},
+                "module": {"type": "string"}
+            },
+            "allOf":[
+                {"required": ["hierarchypath", "xml_id", "name"]},
+                {"required": ["name", "value", "module"]}
+            ]
+        },
+        "updated":{
+            "type": "array",
+            "properties":{
+                "hierarchypath": {"type": "string"},
+                "xml_id": {"type": "string"},
+                "original": {"type": "string"},
+                "modified": {"type": "string"},
+                "name": {"type": "string"},
+                "module": {"type": "string"}                
+            },
+            "allOf":[
+                {"required": ["hierarchypath", "xml_id", "original", "modified"]},
+                {"required": ["name", "module", "original", "modified"]},
+                {"required": ["xml_id", "original", "modified"]}
+            ]
+        },
+        "added":{
+            "type": "array",
+            "properties":{
+                "hierarchypath": {"type": "string"},
+                "xml_id": {"type": "string"},
+                "name": {"type": "string"},
+                "value": {"type": "string"},
+                "module": {"type": "string"},
+                "arch": {"type": "string"}
+            },
+            "allOf":[
+                {"required": ["hierarchypath", "xml_id", "name"]},
+                {"required": ["name", "module", "value"]},
+                {"required": ["xml_id", "arch"]}
+            ]
+        }
+    },
+    "anyOf":[
+        {"required": ["added"]},
+        {"required": ["updated"]},
+        {"required": ["deleted"]}
+    ]
+}

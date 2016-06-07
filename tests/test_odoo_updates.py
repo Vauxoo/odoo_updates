@@ -2,6 +2,8 @@ from unittest2 import TestCase
 from odoo_updates import odoo_updates
 import shlex
 import spur
+import simplejson as json
+from jsonschema import validate
 
 
 class TestOdooUpdates(TestCase):
@@ -11,6 +13,8 @@ class TestOdooUpdates(TestCase):
         cls.shell = spur.LocalShell()
         cls.shell.run(shlex.split('psql test_original -f tests/files/original_test_db.sql'))
         cls.shell.run(shlex.split('psql test_updated -f tests/files/updated_test_db.sql'))
+        with open('tests/files/json_schema.json', "r") as schema:
+            cls.schema = json.load(schema)
 
     def test_01_menu_tree(self):
         res = odoo_updates.menu_tree(1, 'test_original')
@@ -27,21 +31,14 @@ class TestOdooUpdates(TestCase):
 
     def test_03_get_menus_diff(self):
         res = odoo_updates.get_menus_diff('test_original', 'test_updated')
+        validate(res, self.schema)
         self.assertEquals(len(res['added']), 1)
-        self.assertIsInstance(res['added'], list)
-        self.assertIsInstance(res['added'][0], dict)
         self.assertEquals(res['added'][0]['name'], 'test_menu_4')
         self.assertEquals(len(res['deleted']), 1)
-        self.assertIsInstance(res['deleted'], list)
-        self.assertIsInstance(res['deleted'][0], dict)
         self.assertEquals(res['deleted'][0]['name'], 'test_menu_3')
         self.assertEquals(len(res['updated']), 1)
-        self.assertIsInstance(res['updated'], list)
-        self.assertIsInstance(res['updated'][0], dict)
         self.assertEquals(res['updated'][0]['original'], 'test_menu_1')
         self.assertNotEqual(res['updated'][0]['original'], res['updated'][0]['modified'])
-        self.assertNotIn(res['added'][0], res['deleted'])
-        self.assertNotIn(res['deleted'][0], res['added'])
 
     def test_04_get_translations(self):
         res = odoo_updates.get_translations('test_original')
@@ -54,45 +51,31 @@ class TestOdooUpdates(TestCase):
         original = odoo_updates.get_translations('test_original')
         updated = odoo_updates.get_translations('test_updated')
         res = odoo_updates.compare_translations(original, updated)
+        validate(res, self.schema)
         self.assertEquals(len(res['added']), 1)
-        self.assertIsInstance(res['added'], list)
-        self.assertIsInstance(res['added'][0], dict)
         self.assertEquals(res['added'][0]['name'], 'name')
         self.assertEquals(res['added'][0]['value'], 'added translation')
         self.assertEquals(len(res['deleted']), 1)
-        self.assertIsInstance(res['deleted'], list)
-        self.assertIsInstance(res['deleted'][0], dict)
         self.assertEquals(res['deleted'][0]['name'], 'surname')
         self.assertEquals(res['deleted'][0]['value'], 'translation number two')
         self.assertEquals(len(res['updated']), 1)
-        self.assertIsInstance(res['updated'], list)
-        self.assertIsInstance(res['updated'][0], dict)
         self.assertEquals(res['updated'][0]['name'], 'name')
         self.assertEquals(res['updated'][0]['original'], 'translation number one')
         self.assertNotEqual(res['updated'][0]['original'], res['updated'][0]['modified'])
-        self.assertNotIn(res['added'][0], res['deleted'])
-        self.assertNotIn(res['deleted'][0], res['added'])
 
     def test_06_get_translations_diff(self):
         res = odoo_updates.get_translations_diff('test_original', 'test_updated')
+        validate(res, self.schema)
         self.assertEquals(len(res['added']), 1)
-        self.assertIsInstance(res['added'], list)
-        self.assertIsInstance(res['added'][0], dict)
         self.assertEquals(res['added'][0]['name'], 'name')
         self.assertEquals(res['added'][0]['value'], 'added translation')
         self.assertEquals(len(res['deleted']), 1)
-        self.assertIsInstance(res['deleted'], list)
-        self.assertIsInstance(res['deleted'][0], dict)
         self.assertEquals(res['deleted'][0]['name'], 'surname')
         self.assertEquals(res['deleted'][0]['value'], 'translation number two')
         self.assertEquals(len(res['updated']), 1)
-        self.assertIsInstance(res['updated'], list)
-        self.assertIsInstance(res['updated'][0], dict)
         self.assertEquals(res['updated'][0]['name'], 'name')
         self.assertEquals(res['updated'][0]['original'], 'translation number one')
         self.assertNotEqual(res['updated'][0]['original'], res['updated'][0]['modified'])
-        self.assertNotIn(res['added'][0], res['deleted'])
-        self.assertNotIn(res['deleted'][0], res['added'])
 
     def test_07_get_views(self):
         res = odoo_updates.get_views('test_original')
@@ -105,25 +88,19 @@ class TestOdooUpdates(TestCase):
         original = odoo_updates.get_views('test_original')
         updated = odoo_updates.get_views('test_updated')
         res = odoo_updates.compare_views(original, updated)
+        validate(res, self.schema)
         self.assertEquals(len(res['added']), 1)
-        self.assertIsInstance(res['added'], list)
-        self.assertIsInstance(res['added'][0], dict)
         self.assertEquals(res['added'][0]['xml_id'], 'test_module.test_model_7')
         self.assertEquals(len(res['updated']), 1)
-        self.assertIsInstance(res['updated'], list)
-        self.assertIsInstance(res['updated'][0], dict)
         self.assertEquals(res['updated'][0]['xml_id'], 'test_module.test_model_5')
         self.assertNotEqual(res['updated'][0]['original'], res['updated'][0]['modified'])
 
     def test_09_get_views_diff(self):
         res = odoo_updates.get_views_diff('test_original', 'test_updated')
+        validate(res, self.schema)
         self.assertEquals(len(res['added']), 1)
-        self.assertIsInstance(res['added'], list)
-        self.assertIsInstance(res['added'][0], dict)
         self.assertEquals(res['added'][0]['xml_id'], 'test_module.test_model_7')
         self.assertEquals(len(res['updated']), 1)
-        self.assertIsInstance(res['updated'], list)
-        self.assertIsInstance(res['updated'][0], dict)
         self.assertEquals(res['updated'][0]['xml_id'], 'test_module.test_model_5')
         self.assertNotEqual(res['updated'][0]['original'], res['updated'][0]['modified'])
 
