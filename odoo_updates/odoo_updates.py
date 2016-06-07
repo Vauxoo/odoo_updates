@@ -3,7 +3,7 @@
 import difflib
 import click
 import os
-from utils import PostgresConnector, copy_list_dicts
+from .utils import PostgresConnector, copy_list_dicts
 import json
 import shlex
 import spur
@@ -53,10 +53,8 @@ def get_views(database):
     Select the views contents and xml_id from the specified database.
     The xml_id is formed by joining the module name and the id_model_data name so it
     can be used for the comparison and for the report at the end.
-
     :param database: database name to query on
     :return: List of dicts with the xml_id and view content
-
     """
     sql = """SELECT ir_model_data.module || '.' || ir_model_data.name xml_id, arch
         FROM ir_model_data
@@ -72,8 +70,10 @@ def get_views(database):
 def get_branches():
     json_filename = '/tmp/branches.json'
     branches_file = os.path.expanduser('~/backupws/branches.py')
-    command = 'python {branches} -s -p instance/ -f {name}'.format(name=json_filename,
-                                                                   branches=branches_file)
+    instance_path = os.path.expanduser('~/instance')
+    command = 'python {branches} -s -p {instance} -f {name}'.format(name=json_filename,
+                                                                    branches=branches_file,
+                                                                    instance=instance_path)
     shell = spur.LocalShell()
     shell.run(shlex.split(command))
     with open(json_filename, "r") as dest:
@@ -83,11 +83,11 @@ def get_branches():
 
 def get_translations(database):
     """
-    Select the translation values, ids, translated fields name and modules that contain those fields
-    from the specified database. The translation value is needed to compare the different translations
-    from different database, the id is to make sure we are comparing the same translated field of both
-    databases and the translated field name and modules are just to display more information.
-
+    Select the translation values, ids, translated fields name and modules that contain those
+    fields from the specified database. The translation value is needed to compare the different
+    translations from different database, the id is to make sure we are comparing the same
+    translated field of both databases and the translated field name and modules are just to
+    display more information.
     :param database: database name to query on
     :return: List of dicts with the information obtained from the database
     """
@@ -100,7 +100,6 @@ def get_translations(database):
 def compare_views(original_views, modified_views):
     """
     Compare all the views from views_prod with the views_updates and returns a proper report
-
     :param original_views: This would be the views from production database (a copy of course)
     :param modified_views: This is are the views from the copy with
         all changes applied (-u all, -u app_module).
@@ -112,7 +111,7 @@ def compare_views(original_views, modified_views):
         'updated': list(),
         'added': list()
     }
-    for uindex, view_modified in enumerate(modified_views):
+    for view_modified in modified_views:
         for index, view_original in enumerate(original_views):
             if view_original['xml_id'] == view_modified['xml_id'] and index not in pchecked:
                 if view_original['arch'] != view_modified['arch']:
@@ -127,15 +126,16 @@ def compare_views(original_views, modified_views):
             res.get('added').append(view_modified)
     return res
 
+
 def compare_translations(original_translations, modified_translations):
     """
     Compare all the translated fields from two databases and returns a proper report
-
-    :param original_translations: The translations contained in the production database (copy of course).
-    :param modified_translations: The translations contained in the updates database with all the changes
-        that will be applied in the production database.
-    :return: A dict with the added, updated and removed translations between the production database and
-        the updates database.
+    :param original_translations: The translations contained in the production
+        database (copy of course).
+    :param modified_translations: The translations contained in the updates database with all the
+        changes that will be applied in the production database.
+    :return: A dict with the added, updated and removed translations between the production
+        database and the updates database.
     """
     checked = list()
     res = {
@@ -170,6 +170,7 @@ def compare_translations(original_translations, modified_translations):
             })
     return res
 
+
 def get_views_diff(original_database, modified_database):
     """
     Receive the databases names, get the views and return a dict with the original and
@@ -184,11 +185,11 @@ def get_views_diff(original_database, modified_database):
     res = compare_views(original_views, modified_views)
     return res
 
+
 def get_translations_diff(original_database, modified_database):
     """
     Receive the databases names, get the translations and return a dict with the added,
     modified and removed translations.
-
     :param original_database: The name of the unmodified database.
     :param modified_database: The name of the updated database.
     :return: dict with the added, modified and removed translations.
@@ -250,7 +251,8 @@ def diff_to_screen(views_states, title):
                 diff = view.get('value').split('\\n')
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
-            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=view.get('xml_id' if 'xml_id' in view else 'name')),
+            xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
+            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
                         fg='yellow')
             if 'hierarchypath' in view:
                 click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
@@ -262,6 +264,7 @@ def diff_to_screen(views_states, title):
                     click.secho(line, fg='red')
                 else:
                     click.secho(line)
+
 
 def branches_to_screen(branches):
     click.echo('Repositories:\n')

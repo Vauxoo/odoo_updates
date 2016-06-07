@@ -110,7 +110,7 @@ class PostgresConnector(object):
         """
         try:
             logger.debug('')
-            res = self.execute("select version();")
+            res = self._execute("select version();")
             logger.debug('Postgres returned: %s', res)
         except Exception as error:  # pylint: disable=W0703
             logger.error('PostgreSQL connection test failed %s',

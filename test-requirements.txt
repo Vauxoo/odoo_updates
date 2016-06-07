@@ -1,0 +1,11 @@
+semantic_version
+pylint
+flake8
+unittest2
+tox
+pytest
+coveralls
+simplejson
+spur
+bzr
+jsonschema
