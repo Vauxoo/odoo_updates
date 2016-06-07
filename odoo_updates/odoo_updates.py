@@ -121,8 +121,8 @@ def get_fields(database):
                      makes relationship if you do not have this in None
     """
     sql = """
-          select model, name, field_description, ttype, relation,
-          relation_field from ir_model_fields;
+          select model, name, field_description,
+          ttype as type from ir_model_fields;
           """
     with PostgresConnector({'dbname': database}) as conn:
         cursor = conn.execute_select(sql)
@@ -203,6 +203,7 @@ def compare_translations(original_translations, modified_translations):
             })
     return res
 
+
 def compare_fields(original_fields, modified_fields):
     """
     compares the fields of tables in a database and returns the direfencias
@@ -216,25 +217,21 @@ def compare_fields(original_fields, modified_fields):
     {'updated': [{'model': Model name database ,
                   'name': field name,
                   'original': unchange in the properties of a field can be,
-                              field_description, ttype, relation,
-                              relation_field... etc
+                              field_description, ttype... etc
                   'modified': change in the properties of a field can be,
-                              values of field_description, ttype,
-                              relation, relation_field... etc,
+                              values of field_description, type... etc,
                   'column': name of property (field_description,
-                            ttype... etc),
+                            type... etc),
                    }]
     {'added': [{'model': Model name database ,
-                  'name': field name,
-                  'column': name of property (field_description,
-                            ttype... etc),
-                  'values': added value of the property
+                'name': field name,
+                'field_description': Value,
+                'type': value,
                    }]
     {'deleted': [{'model': Model name database ,
                   'name': field name,
-                  'column': name of property (field_description,
-                            ttype... etc),
-                  'values': deleted value of the property
+                  'field_description': Value,
+                  'type': value,
                    }]
     }
     """
@@ -245,6 +242,18 @@ def compare_fields(original_fields, modified_fields):
         for rcd in records:
             struct[rcd['model']].append(rcd['name'])
         return struct
+
+    def group(records):
+        for state, values in records.iteritems():
+            if state != 'updated':
+                for fields in values:
+                    order = [index for index, value in enumerate(values)
+                             if fields['model'] == value['model'] and
+                             fields['name'] == value['name']]
+                    if len(order) > 1:
+                        values[order[0]].update(values[order[1]])
+                        values.pop(order[1])
+        return records
     res = {
         'updated': list(),
         'added': list(),
@@ -286,10 +295,9 @@ def compare_fields(original_fields, modified_fields):
                     res.get('deleted').append({
                         'model': original['model'],
                         'name': original['name'],
-                        'column': column,
-                        'value': values,
+                        column: values,
                         })
-    return res
+    return group(res)
 
 
 def get_fields_diff(original_database, modified_database):
@@ -367,7 +375,7 @@ def get_menus_diff(original_database, modified_database):
 
 
 def diff_to_screen(views_states, title):
-    show_field_model = {}
+    show_field_model = set()
     for state, values in views_states.iteritems():
         click.secho('+ {state} {title}'.format(state=state.title(), title=title), fg='yellow')
         for view in values:
@@ -377,26 +385,28 @@ def diff_to_screen(views_states, title):
                     view['modified'].split('\n')
                 )
             elif title == 'Translations':
-                 diff = view.get('value').split('\\n')
-            elif title == 'Fields':
                 diff = view.get('value').split('\\n')
+            elif title == 'Fields':
+                diff = ''
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
+            if title != 'Fields':
                 xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
                 click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
-                           fg='yellow')
+                            fg='yellow')
             if title == 'Fields':
-                if view['model'] not in show_field_model:
-                    show_field_model[view['model']] = []
+                if 'column' not in view:
+                    view.update({'column': filter(lambda x: x not in
+                                ('name', 'model'), view), })
+                if view.get('model') not in show_field_model:
+                    show_field_model.add(view.get('model'))
                     click.secho('+++ {title}: {model}'.
                                 format(title='Model',
                                        model=view.get('model')),
                                 fg='yellow')
-                if view['name'] not in show_field_model[view['model']]:
-                    show_field_model[view['model']].append(view['name'])
-                    click.secho('+++ {title}: {name}'.
-                                format(title='Field name', name=view.get('name')),
-                                fg='yellow')
+                click.secho('+++ {title}: {name}'.
+                            format(title='Field name', name=view.get('name')),
+                            fg='yellow')
             else:
                 click.secho('+++ {title} {xml_id}'.format(title=title,
                             xml_id=view.get('xml_id' if 'xml_id'
@@ -407,12 +417,18 @@ def diff_to_screen(views_states, title):
                             fg='yellow')
             if 'column' in view:
                 column = view.get('column', '')
-                if 'field' in column:
-                    column = column.replace("_", ' ')
-                else:
-                    column = "field {value}".format(value=column)
-                click.secho('++++ {column}'.format(column=column),
-                            fg='yellow')
+                if not isinstance(column, list):
+                    column = [column]
+                for colm in column:
+                    if 'field' in colm:
+                        output = colm.replace("_", " ")
+                    else:
+                        output = "field {out}".format(out=colm)
+                    click.secho('++++ {column}'.format(column=output),
+                                fg='yellow')
+                    if state != 'updated':
+                        click.secho(view.get(colm))
+
             for line in diff:
                 if line.startswith('+'):
                     click.secho(line, fg='green')
