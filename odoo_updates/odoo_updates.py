@@ -245,15 +245,31 @@ def compare_fields(original_fields, modified_fields):
 
     def group(records):
         for state, values in records.iteritems():
-            if state != 'updated':
-                for fields in values:
+            for fields in values:
+                if state != "updated":
                     order = [index for index, value in enumerate(values)
                              if fields['model'] == value['model'] and
                              fields['name'] == value['name']]
                     if len(order) > 1:
                         values[order[0]].update(values[order[1]])
                         values.pop(order[1])
+                else:
+                    model = fields['model']
+                    name = fields['name']
+                    order = list(set([index for index,
+                                 field in enumerate(values)
+                                 for key, value in field.iteritems()
+                                 if isinstance(value, dict)
+                                 and model == field['model']
+                                 and name == field['name']]))
+                    if len(order) > 1:
+                        values[order[0]]['modified']\
+                            .update(values[order[1]]['modified'])
+                        values[order[0]]['original']\
+                            .update(values[order[1]]['original'])
+                        values.pop(order[1])
         return records
+
     res = {
         'updated': list(),
         'added': list(),
@@ -270,9 +286,8 @@ def compare_fields(original_fields, modified_fields):
                             res.get('updated').append({
                                 'model': original['model'],
                                 'name': original['name'],
-                                'original': original[column],
-                                'modified': modified[column],
-                                'column': column,
+                                'original': {column: original[column]},
+                                'modified': {column: values},
                                 })
     for modified in modified_fields:
         if modified['model'] in checked['original'] and modified['name']\
@@ -283,8 +298,7 @@ def compare_fields(original_fields, modified_fields):
                     res.get('added').append({
                         'model': modified['model'],
                         'name': modified['name'],
-                        'column': column,
-                        'value': values,
+                        column: values,
                         })
     for original in original_fields:
         if original['model'] in checked['modified'] and \
@@ -375,15 +389,28 @@ def get_menus_diff(original_database, modified_database):
 
 
 def diff_to_screen(views_states, title):
-    show_field_model = set()
+    show_model = set()
+    show_field = set()
     for state, values in views_states.iteritems():
         click.secho('+ {state} {title}'.format(state=state.title(), title=title), fg='yellow')
         for view in values:
             if state == 'updated':
-                diff = difflib.unified_diff(
-                    view['original'].split('\n'),
-                    view['modified'].split('\n')
-                )
+                if title != 'Fields':
+                    diff = difflib.unified_diff(
+                        view['original'].split('\n'),
+                        view['modified'].split('\n'))
+                else:
+                    lmbd = lambda org, mdf: difflib.\
+                        unified_diff(org.split('\n'),
+                                     mdf.split('\n')) if org or mdf else False
+                    diff = {'type': lmbd(
+                        view['original'].get('type', ''),
+                        view['modified'].get('type', '')),
+                        'field_description': lmbd(
+                            view['original'].get('field_description', ''),
+                            view['modified'].get('field_description', '')), }
+                    view.update({'column': diff})
+                    
             elif title == 'Translations':
                 diff = view.get('value').split('\\n')
             elif title == 'Fields':
@@ -398,15 +425,17 @@ def diff_to_screen(views_states, title):
                 if 'column' not in view:
                     view.update({'column': filter(lambda x: x not in
                                 ('name', 'model'), view), })
-                if view.get('model') not in show_field_model:
-                    show_field_model.add(view.get('model'))
-                    click.secho('+++ {title}: {model}'.
-                                format(title='Model',
+                if view.get('model') not in show_model:
+                    show_model.add(view.get('model'))
+                    click.secho('+++ {title} {model}'.
+                                format(title='model',
                                        model=view.get('model')),
                                 fg='yellow')
-                click.secho('+++ {title}: {name}'.
-                            format(title='Field name', name=view.get('name')),
-                            fg='yellow')
+                if view.get('name') not in show_field:
+                    show_field.add(view.get('name'))
+                    click.secho('+++ {title} {name}'.
+                                format(title='field', name=view.get('name')),
+                                fg='yellow')
             else:
                 click.secho('+++ {title} {xml_id}'.format(title=title,
                             xml_id=view.get('xml_id' if 'xml_id'
@@ -417,25 +446,32 @@ def diff_to_screen(views_states, title):
                             fg='yellow')
             if 'column' in view:
                 column = view.get('column', '')
-                if not isinstance(column, list):
-                    column = [column]
                 for colm in column:
                     if 'field' in colm:
                         output = colm.replace("_", " ")
                     else:
                         output = "field {out}".format(out=colm)
-                    click.secho('++++ {column}'.format(column=output),
-                                fg='yellow')
-                    if state != 'updated':
-                        click.secho(view.get(colm))
-
-            for line in diff:
-                if line.startswith('+'):
-                    click.secho(line, fg='green')
-                elif line.startswith('-'):
-                    click.secho(line, fg='red')
-                else:
-                    click.secho(line)
+                    if view.get(colm, False) or column.get(colm, False):
+                        click.secho('++++ {column}'.format(column=output),
+                                    fg='yellow')
+                        if state != 'updated':
+                            click.secho(view.get(colm))
+                        else:
+                            for line in diff.get(colm):
+                                if line.startswith('+'):
+                                    click.secho(line, fg='green')
+                                elif line.startswith('-'):
+                                    click.secho(line, fg='red')
+                                else:
+                                    click.secho(line)
+            if state != 'updated':
+                for line in diff:
+                    if line.startswith('+'):
+                        click.secho(line, fg='green')
+                    elif line.startswith('-'):
+                        click.secho(line, fg='red')
+                    else:
+                        click.secho(line)
 
 
 def branches_to_screen(branches):
