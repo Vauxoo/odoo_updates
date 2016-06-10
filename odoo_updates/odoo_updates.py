@@ -235,6 +235,8 @@ def compare_fields(original_fields, modified_fields):
                    }]
     }
     """
+    print "original", original_fields
+    print "modified", modified_fields
     def create_structure_model(records):
         struct = {}
         for rcd in records:
@@ -389,89 +391,84 @@ def get_menus_diff(original_database, modified_database):
 
 
 def diff_to_screen(views_states, title):
-    show_model = set()
-    show_field = set()
     for state, values in views_states.iteritems():
         click.secho('+ {state} {title}'.format(state=state.title(), title=title), fg='yellow')
         for view in values:
             if state == 'updated':
-                if title != 'Fields':
-                    diff = difflib.unified_diff(
-                        view['original'].split('\n'),
-                        view['modified'].split('\n'))
-                else:
-                    lmbd = lambda org, mdf: difflib.\
-                        unified_diff(org.split('\n'),
-                                     mdf.split('\n')) if org or mdf else False
-                    diff = {'type': lmbd(
-                        view['original'].get('type', ''),
-                        view['modified'].get('type', '')),
-                        'field_description': lmbd(
-                            view['original'].get('field_description', ''),
-                            view['modified'].get('field_description', '')), }
-                    view.update({'column': diff})
-                    
+                diff = difflib.unified_diff(
+                    view['original'].split('\n'),
+                    view['modified'].split('\n')
+                )
             elif title == 'Translations':
                 diff = view.get('value').split('\\n')
-            elif title == 'Fields':
-                diff = ''
             else:
                 diff = view.get('arch' if 'arch' in view else 'name').split('\\n')
-            if title != 'Fields':
-                xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
-                click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
-                            fg='yellow')
-            if title == 'Fields':
-                if 'column' not in view:
-                    view.update({'column': filter(lambda x: x not in
-                                ('name', 'model'), view), })
-                if view.get('model') not in show_model:
-                    show_model.add(view.get('model'))
-                    click.secho('+++ {title} {model}'.
-                                format(title='model',
-                                       model=view.get('model')),
-                                fg='yellow')
-                if view.get('name') not in show_field:
-                    show_field.add(view.get('name'))
-                    click.secho('+++ {title} {name}'.
-                                format(title='field', name=view.get('name')),
-                                fg='yellow')
-            else:
-                click.secho('+++ {title} {xml_id}'.format(title=title,
-                            xml_id=view.get('xml_id' if 'xml_id'
-                                            in view else 'name')),
-                            fg='yellow')
+            xml_id = view.get('xml_id' if 'xml_id' in view else 'name')
+            click.secho('+++ {title} {xml_id}'.format(title=title, xml_id=xml_id),
+                        fg='yellow')
             if 'hierarchypath' in view:
                 click.secho('++++ Check it in: {hi}'.format(hi=view.get('hierarchypath')),
                             fg='yellow')
-            if 'column' in view:
-                column = view.get('column', '')
-                for colm in column:
-                    if 'field' in colm:
-                        output = colm.replace("_", " ")
-                    else:
-                        output = "field {out}".format(out=colm)
-                    if view.get(colm, False) or column.get(colm, False):
-                        click.secho('++++ {column}'.format(column=output),
-                                    fg='yellow')
-                        if state != 'updated':
-                            click.secho(view.get(colm))
+            for line in diff:
+                if line.startswith('+'):
+                    click.secho(line, fg='green')
+                elif line.startswith('-'):
+                    click.secho(line, fg='red')
+                else:
+                    click.secho(line)
+
+
+def fields_to_screen(fields_states, title):
+    show_model_field = dict()
+    for state, values in fields_states.iteritems():
+        click.secho('+ {state} {title}'.
+                    format(state=state.title(), title=title), fg='yellow')
+        for field in values:
+            if state == 'updated':
+                lmbd = lambda org, mdf: difflib.\
+                    unified_diff(org.split('\n'),
+                                 mdf.split('\n')) if org or mdf else False
+                diff = {'type': lmbd(
+                        field['original'].get('type', ''),
+                        field['modified'].get('type', '')),
+                        'field_description': lmbd(
+                            field['original'].get('field_description', ''),
+                            field['modified'].get('field_description', '')), }
+                field.update({'column': diff})
+            if 'column' not in field:
+                diff = {key: value.split('\n')
+                        for key, value in field.iteritems()
+                        if k not in ('name', 'model')}
+                field.update({'column': diff})
+            if field.get('model') not in show_model_field:
+                show_model_field[field.get('model')] = []
+                click.secho('+++ {title} {model}'.
+                            format(title='model',
+                                   model=field.get('model')),
+                            fg='yellow')
+            if field.get('name') not in\
+               show_model_field[field.get('model')]:
+                show_model_field[field.get('model')].append(field.get('name'))
+                click.secho('+++ {title} {name}'.
+                            format(title='field', name=field.get('name')),
+                            fg='yellow')
+            column = field.get('column', '')
+            for colm in column:
+                if 'field' in colm:
+                    output = colm.replace("_", " ")
+                else:
+                    output = "field {out}".format(out=colm)
+                if field.get(colm, False) or column.get(colm, False):
+                    click.secho('++++ {column}'.format(column=output),
+                                fg='yellow')
+                    diff = column.get(colm)
+                    for line in diff:
+                        if line.startswith('+'):
+                            click.secho(line, fg='green')
+                        elif line.startswith('-'):
+                            click.secho(line, fg='red')
                         else:
-                            for line in diff.get(colm):
-                                if line.startswith('+'):
-                                    click.secho(line, fg='green')
-                                elif line.startswith('-'):
-                                    click.secho(line, fg='red')
-                                else:
-                                    click.secho(line)
-            if state != 'updated':
-                for line in diff:
-                    if line.startswith('+'):
-                        click.secho(line, fg='green')
-                    elif line.startswith('-'):
-                        click.secho(line, fg='red')
-                    else:
-                        click.secho(line)
+                            click.secho(line)
 
 
 def branches_to_screen(branches):
