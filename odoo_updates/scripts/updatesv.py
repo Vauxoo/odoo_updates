@@ -71,7 +71,6 @@ def fields(ctx):
     fields_states = odoo_updates.get_fields_diff(ctx.obj['original'],
                                                  ctx.obj['updated'])
     if ctx.obj['screen']:
-        #~ odoo_updates.diff_to_screen(fields_states, 'Fields')
         odoo_updates.fields_to_screen(fields_states, 'Fields')
     else:
         message = utils.jsonify(fields_states, 'fields', ctx.obj['customer'])

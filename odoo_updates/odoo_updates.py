@@ -235,8 +235,6 @@ def compare_fields(original_fields, modified_fields):
                    }]
     }
     """
-    print "original", original_fields
-    print "modified", modified_fields
     def create_structure_model(records):
         struct = {}
         for rcd in records:
