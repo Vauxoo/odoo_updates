@@ -214,26 +214,6 @@ def compare_fields(original_fields, modified_fields):
     :return: a dict with the added, updated and deleted fields.
     In the case of updated will return the diff between the org_database
     and dst_database
-    {'updated': [{'model': Model name database ,
-                  'name': field name,
-                  'original': unchange in the properties of a field can be,
-                              field_description, ttype... etc
-                  'modified': change in the properties of a field can be,
-                              values of field_description, type... etc,
-                  'column': name of property (field_description,
-                            type... etc),
-                   }]
-    {'added': [{'model': Model name database ,
-                'name': field name,
-                'field_description': Value,
-                'type': value,
-                   }]
-    {'deleted': [{'model': Model name database ,
-                  'name': field name,
-                  'field_description': Value,
-                  'type': value,
-                   }]
-    }
     """
     def create_structure_model(records):
         struct = {}
@@ -243,37 +223,27 @@ def compare_fields(original_fields, modified_fields):
             struct[rcd['model']].append(rcd['name'])
         return struct
 
-    def group(records):
-        for state, values in records.iteritems():
-            for fields in values:
-                if state != "updated":
-                    order = [index for index, value in enumerate(values)
-                             if fields['model'] == value['model'] and
-                             fields['name'] == value['name']]
-                    if len(order) > 1:
-                        values[order[0]].update(values[order[1]])
-                        values.pop(order[1])
-                else:
-                    model = fields['model']
-                    name = fields['name']
-                    order = list(set([index for index,
-                                 field in enumerate(values)
-                                 for key, value in field.iteritems()
-                                 if isinstance(value, dict)
-                                 and model == field['model']
-                                 and name == field['name']]))
-                    if len(order) > 1:
-                        values[order[0]]['modified']\
-                            .update(values[order[1]]['modified'])
-                        values[order[0]]['original']\
-                            .update(values[order[1]]['original'])
-                        values.pop(order[1])
-        return records
-
+    def group(res, model, name, state, record):
+        values = res.get(state, [])
+        order = list(set([index for index,
+                     field in enumerate(values)
+                     for key, value in field.iteritems()
+                     if model == field['model'] and name == field['name']
+                     and state != 'updated' or model == field['model']
+                     and name == field['name']
+                     and isinstance(value, dict)]))
+        if order:
+            if state == 'updated':
+                res.get('updated')[order[0]].get('original', {})\
+                   .update(record['original'])
+                res.get('updated')[order[0]].get('modified', {})\
+                   .update(record['modified'])
+            else:
+                res.get(state)[order[0]].update(record)
+        else:
+            res.get(state).append(record)
     res = {
-        'updated': list(),
-        'added': list(),
-        'deleted': list(),
+        'updated': list(), 'added': list(), 'deleted': list(),
     }
     checked = {'original': create_structure_model(original_fields),
                'modified': create_structure_model(modified_fields)}
@@ -283,35 +253,41 @@ def compare_fields(original_fields, modified_fields):
                 for column, values in modified.iteritems():
                     if values != original[column] and modified['name']\
                             == original['name']:
-                            res.get('updated').append({
+                            updated = {
                                 'model': original['model'],
                                 'name': original['name'],
                                 'original': {column: original[column]},
                                 'modified': {column: values},
-                                })
+                                }
+                            group(res, original['model'], original['name'],
+                                  'updated', updated)
     for modified in modified_fields:
         if modified['model'] in checked['original'] and modified['name']\
                 not in checked['original'][modified['model']] or \
                 modified['model'] not in checked['original']:
             for column, values in modified.iteritems():
                 if values and column not in ['model', 'name']:
-                    res.get('added').append({
+                    added = {
                         'model': modified['model'],
                         'name': modified['name'],
                         column: values,
-                        })
+                        }
+                    group(res, modified['model'], modified['name'],
+                          'added', added)
     for original in original_fields:
         if original['model'] in checked['modified'] and \
            original['name'] not in checked['modified'][original['model']]\
            or original['model'] not in checked['modified']:
             for column, values in original.iteritems():
                 if values and column not in ['model', 'name']:
-                    res.get('deleted').append({
+                    deleted = {
                         'model': original['model'],
                         'name': original['name'],
                         column: values,
-                        })
-    return group(res)
+                        }
+                    group(res, original['model'], original['name'],
+                          'deleted', deleted)
+    return res
 
 
 def get_fields_diff(original_database, modified_database):
@@ -436,7 +412,7 @@ def fields_to_screen(fields_states, title):
             if 'column' not in field:
                 diff = {key: value.split('\n')
                         for key, value in field.iteritems()
-                        if k not in ('name', 'model')}
+                        if key not in ('name', 'model')}
                 field.update({'column': diff})
             if field.get('model') not in show_model_field:
                 show_model_field[field.get('model')] = []
