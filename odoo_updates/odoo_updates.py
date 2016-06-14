@@ -221,35 +221,23 @@ def compare_fields(original_fields, modified_fields):
     records_updates = list()
     for modified in modified_fields:
         for original in original_fields:
-            if modified['model'] == original['model']:
-                for column, values in modified.iteritems():
-                    if values != original[column] and modified['name']\
-                            == original['name']:
-                            updated = {
-                                'model': original['model'],
-                                'name': original['name'],
-                                'original': {column: original[column]},
-                                'modified': {column: values},
-                                }
-                            records_updates.append(original)
-                            records_updates.append(modified)
-                            order = list(set([index for index,
-                                              field in
-                                              enumerate(res.get('updated'))
-                                             for key, value in
-                                             field.iteritems()
-                                             if original['model']
-                                             == field['model']
-                                             and original['name']
-                                             == field['name']
-                                             and isinstance(value, dict)]))
-                            if order:
-                                res.get('updated')[order[0]].get('original', {})\
-                                   .update(updated['original'])
-                                res.get('updated')[order[0]].get('modified', {})\
-                                    .update(updated['modified'])
-                            else:
-                                res.get('updated').append(updated)
+            if modified['model'] == original['model']\
+               and modified['name'] == original['name']:
+                if modified['type'] != original['type']\
+                   or modified['field_description']\
+                   != original['field_description']:
+                    records_updates.append(original)
+                    records_updates.append(modified)
+                    updated = {'model': original['model'],
+                               'name': original['name'],
+                               'original': {'type': original['type'],
+                                            'field_description':
+                                            original['field_description']},
+                               'modified': {'type': modified['type'],
+                                            'field_description':
+                                            modified['field_description']},
+                               }
+                    res.get('updated').append(updated)
     for original in original_fields:
         if original not in modified_fields and original not in records_updates:
             res.get('deleted').append(original)
@@ -369,21 +357,16 @@ def fields_to_screen(fields_states, title):
                     format(state=state.title(), title=title), fg='yellow')
         for field in values:
             if state == 'updated':
-                lmbd = lambda org, mdf: difflib.\
-                    unified_diff(org.split('\n'),
-                                 mdf.split('\n')) if org or mdf else False
-                diff = {'type': lmbd(
-                        field['original'].get('type', ''),
-                        field['modified'].get('type', '')),
-                        'field_description': lmbd(
-                            field['original'].get('field_description', ''),
-                            field['modified'].get('field_description', '')), }
-                field.update({'column': diff})
-            if 'column' not in field:
-                diff = {key: value.split('\n')
-                        for key, value in field.iteritems()
-                        if key not in ('name', 'model')}
-                field.update({'column': diff})
+                column = {'type': difflib.unified_diff(
+                        field['original'].get('type', '').split('\n'),
+                        field['modified'].get('type', '').split('\n')),
+                        'field_description': difflib.unified_diff(
+                            field['original'].get('field_description', '').split('\n'),
+                            field['modified'].get('field_description', '').split('\n')), }
+                field.update(column)
+            else:
+                field.update({'type': field['type'].split('\n'),
+                              'field_description': field['field_description'].split('\n'), })
             if field.get('model') not in show_model_field:
                 show_model_field[field.get('model')] = []
                 click.secho('+++ {title} {model}'.
@@ -396,16 +379,15 @@ def fields_to_screen(fields_states, title):
                 click.secho('+++ {title} {name}'.
                             format(title='field', name=field.get('name')),
                             fg='yellow')
-            column = field.get('column', '')
-            for colm in column:
+            for colm in field:
                 if 'field' in colm:
                     output = colm.replace("_", " ")
                 else:
                     output = "field {out}".format(out=colm)
-                if field.get(colm, False) or column.get(colm, False):
+                diff = list(field.get(colm))
+                if diff and colm in ('type', 'field_description'):
                     click.secho('++++ {column}'.format(column=output),
                                 fg='yellow')
-                    diff = column.get(colm)
                     for line in diff:
                         if line.startswith('+'):
                             click.secho(line, fg='green')
