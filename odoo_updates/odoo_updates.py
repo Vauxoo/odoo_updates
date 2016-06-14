@@ -215,38 +215,10 @@ def compare_fields(original_fields, modified_fields):
     In the case of updated will return the diff between the org_database
     and dst_database
     """
-    def create_structure_model(records):
-        struct = {}
-        for rcd in records:
-            struct[rcd['model']] = []
-        for rcd in records:
-            struct[rcd['model']].append(rcd['name'])
-        return struct
-
-    def group(res, model, name, state, record):
-        values = res.get(state, [])
-        order = list(set([index for index,
-                     field in enumerate(values)
-                     for key, value in field.iteritems()
-                     if model == field['model'] and name == field['name']
-                     and state != 'updated' or model == field['model']
-                     and name == field['name']
-                     and isinstance(value, dict)]))
-        if order:
-            if state == 'updated':
-                res.get('updated')[order[0]].get('original', {})\
-                   .update(record['original'])
-                res.get('updated')[order[0]].get('modified', {})\
-                   .update(record['modified'])
-            else:
-                res.get(state)[order[0]].update(record)
-        else:
-            res.get(state).append(record)
     res = {
         'updated': list(), 'added': list(), 'deleted': list(),
     }
-    checked = {'original': create_structure_model(original_fields),
-               'modified': create_structure_model(modified_fields)}
+    records_updates = list()
     for modified in modified_fields:
         for original in original_fields:
             if modified['model'] == original['model']:
@@ -259,34 +231,32 @@ def compare_fields(original_fields, modified_fields):
                                 'original': {column: original[column]},
                                 'modified': {column: values},
                                 }
-                            group(res, original['model'], original['name'],
-                                  'updated', updated)
-    for modified in modified_fields:
-        if modified['model'] in checked['original'] and modified['name']\
-                not in checked['original'][modified['model']] or \
-                modified['model'] not in checked['original']:
-            for column, values in modified.iteritems():
-                if values and column not in ['model', 'name']:
-                    added = {
-                        'model': modified['model'],
-                        'name': modified['name'],
-                        column: values,
-                        }
-                    group(res, modified['model'], modified['name'],
-                          'added', added)
+                            records_updates.append(original)
+                            records_updates.append(modified)
+                            order = list(set([index for index,
+                                              field in
+                                              enumerate(res.get('updated'))
+                                             for key, value in
+                                             field.iteritems()
+                                             if original['model']
+                                             == field['model']
+                                             and original['name']
+                                             == field['name']
+                                             and isinstance(value, dict)]))
+                            if order:
+                                res.get('updated')[order[0]].get('original', {})\
+                                   .update(updated['original'])
+                                res.get('updated')[order[0]].get('modified', {})\
+                                    .update(updated['modified'])
+                            else:
+                                res.get('updated').append(updated)
     for original in original_fields:
-        if original['model'] in checked['modified'] and \
-           original['name'] not in checked['modified'][original['model']]\
-           or original['model'] not in checked['modified']:
-            for column, values in original.iteritems():
-                if values and column not in ['model', 'name']:
-                    deleted = {
-                        'model': original['model'],
-                        'name': original['name'],
-                        column: values,
-                        }
-                    group(res, original['model'], original['name'],
-                          'deleted', deleted)
+        if original not in modified_fields and original not in records_updates:
+            res.get('deleted').append(original)
+
+    for modified in modified_fields:
+        if modified not in original_fields and modified not in records_updates:
+            res.get('added').append(modified)
     return res
 
 
