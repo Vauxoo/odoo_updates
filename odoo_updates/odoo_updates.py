@@ -357,16 +357,18 @@ def fields_to_screen(fields_states, title):
                     format(state=state.title(), title=title), fg='yellow')
         for field in values:
             if state == 'updated':
-                column = {'type': difflib.unified_diff(
+                diff = {'type': list(difflib.unified_diff(
                         field['original'].get('type', '').split('\n'),
-                        field['modified'].get('type', '').split('\n')),
-                        'field_description': difflib.unified_diff(
-                            field['original'].get('field_description', '').split('\n'),
-                            field['modified'].get('field_description', '').split('\n')), }
-                field.update(column)
+                        field['modified'].get('type', '').split('\n'))),
+                        'field_description': list(difflib.unified_diff(
+                            field['original']
+                            .get('field_description', '').split('\n'),
+                            field['modified']
+                            .get('field_description', '').split('\n'))), }
             else:
-                field.update({'type': field['type'].split('\n'),
-                              'field_description': field['field_description'].split('\n'), })
+                diff = {'type': field['type'].split('\n'),
+                        'field_description':
+                            field['field_description'].split('\n'), }
             if field.get('model') not in show_model_field:
                 show_model_field[field.get('model')] = []
                 click.secho('+++ {title} {model}'.
@@ -377,24 +379,22 @@ def fields_to_screen(fields_states, title):
                show_model_field[field.get('model')]:
                 show_model_field[field.get('model')].append(field.get('name'))
                 click.secho('+++ {title} {name}'.
-                            format(title='field', name=field.get('name')),
+                            format(title='field name:', name=field.get('name')),
                             fg='yellow')
-            for colm in field:
-                if 'field' in colm:
-                    output = colm.replace("_", " ")
-                else:
-                    output = "field {out}".format(out=colm)
-                diff = list(field.get(colm))
-                if diff and colm in ('type', 'field_description'):
-                    click.secho('++++ {column}'.format(column=output),
+
+            for colm in diff:
+                if diff[colm]:
+                    output = colm.replace('field_', '')
+                    click.secho('++++field {column}'.format(column=output),
                                 fg='yellow')
-                    for line in diff:
-                        if line.startswith('+'):
-                            click.secho(line, fg='green')
-                        elif line.startswith('-'):
-                            click.secho(line, fg='red')
-                        else:
-                            click.secho(line)
+               
+                for line in diff[colm]:
+                    if line.startswith('+'):
+                        click.secho(line, fg='green')
+                    elif line.startswith('-'):
+                        click.secho(line, fg='red')
+                    else:
+                        click.secho(line)
 
 
 def branches_to_screen(branches):
