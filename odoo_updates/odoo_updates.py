@@ -99,29 +99,23 @@ def get_translations(database):
 
 def get_fields(database):
     """
-    Selection fields model , name , field_description, ttype, relation,
-    relation_field to create a list of fields and their values
+    Selection fields model , name , field_description, ttype,
+    to create a list of fields and their values
     :param database: database name to query on
     :return: List of dicts with the information get from database.
      List of dicts With the information get from the database as follows
      {'model': model ('ir.model'),
       'name': field ('field_id'),
-      'field_description': description ('Fields')
-      'ttype': data type ('integer')
-      'relation': model relation ('ir.model.fields')
-      'relation_field': realation field ('model_id')
+      'description': description ('Fields')
+      'type': data type ('integer')
       ,}
      model: Column having the model name
      name: A column that has the name of the model fields
-     field_description: column that has the description of the model fields
-     ttype: column that has the data type of model fields
-     relation: A column that has the relationship of the field with
-               another model if you do not have this in None
-     relation_field: Column field has the name of another model that
-                     makes relationship if you do not have this in None
+     description: column that has the description of the model fields
+     type: column that has the data type of model fields
     """
     sql = """
-          select model, name, field_description,
+          select model, name, field_description as description,
           ttype as type from ir_model_fields;
           """
     with PostgresConnector({'dbname': database}) as conn:
@@ -224,18 +218,18 @@ def compare_fields(original_fields, modified_fields):
             if modified['model'] == original['model']\
                and modified['name'] == original['name']:
                 if modified['type'] != original['type']\
-                   or modified['field_description']\
-                   != original['field_description']:
+                   or modified['description']\
+                   != original['description']:
                     records_updates.append(original)
                     records_updates.append(modified)
                     updated = {'model': original['model'],
                                'name': original['name'],
                                'original': {'type': original['type'],
-                                            'field_description':
-                                            original['field_description']},
+                                            'description':
+                                            original['description']},
                                'modified': {'type': modified['type'],
-                                            'field_description':
-                                            modified['field_description']},
+                                            'description':
+                                            modified['description']},
                                }
                     res.get('updated').append(updated)
     for original in original_fields:
@@ -360,15 +354,15 @@ def fields_to_screen(fields_states, title):
                 diff = {'type': list(difflib.unified_diff(
                         field['original'].get('type', '').split('\n'),
                         field['modified'].get('type', '').split('\n'))),
-                        'field_description': list(difflib.unified_diff(
+                        'description': list(difflib.unified_diff(
                             field['original']
-                            .get('field_description', '').split('\n'),
+                            .get('description', '').split('\n'),
                             field['modified']
-                            .get('field_description', '').split('\n'))), }
+                            .get('description', '').split('\n'))), }
             else:
                 diff = {'type': field['type'].split('\n'),
-                        'field_description':
-                            field['field_description'].split('\n'), }
+                        'description':
+                            field['description'].split('\n'), }
             if field.get('model') not in show_model_field:
                 show_model_field[field.get('model')] = []
                 click.secho('+++ {title} {model}'.
@@ -379,15 +373,14 @@ def fields_to_screen(fields_states, title):
                show_model_field[field.get('model')]:
                 show_model_field[field.get('model')].append(field.get('name'))
                 click.secho('+++ {title} {name}'.
-                            format(title='field name:', name=field.get('name')),
+                            format(title='field name:',
+                                   name=field.get('name')),
                             fg='yellow')
 
             for colm in diff:
                 if diff[colm]:
-                    output = colm.replace('field_', '')
-                    click.secho('++++field {column}'.format(column=output),
+                    click.secho('++++field {column}'.format(column=colm),
                                 fg='yellow')
-               
                 for line in diff[colm]:
                     if line.startswith('+'):
                         click.secho(line, fg='green')
