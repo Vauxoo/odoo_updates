@@ -48,6 +48,21 @@ CREATE TABLE ir_model_data (
 ALTER TABLE ir_model_data OWNER TO postgres;
 
 --
+-- Name: ir_model_fields; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE ir_model_fields (
+    model character varying(60),
+    name character varying(60),
+    ttype character varying(60),
+    field_description character varying(60),
+    id integer
+);
+
+
+ALTER TABLE ir_model_fields OWNER TO postgres;
+
+--
 -- Name: ir_translation; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -98,6 +113,18 @@ test_model_4	ir.ui.menu	4	test_module
 test_model_5	ir.ui.view	5	test_module
 test_model_6	ir.ui.view	6	test_module
 test_model_7	ir.ui.view	7	test_module
+\.
+
+
+--
+-- Data for Name: ir_model_fields; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY ir_model_fields (model, name, ttype, field_description, id) FROM stdin;
+test_module1	test_field_1	char	description test_field_1	1
+test_module1	test_field_2	char	description test_field_2	2
+test_module2	test_field_3	char	description test_field_3	3
+test_module2	test_field_4	char	description test_field_4	4
 \.
 
 

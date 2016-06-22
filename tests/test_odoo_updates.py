@@ -125,6 +125,47 @@ class TestOdooUpdates(TestCase):
         odoo_updates.branches_to_screen(branches)
         # TODO how to test this function?
 
+    def test_13_get_fields(self):
+        res = odoo_updates.get_fields('test_original')
+        self.assertEquals(len(res), 4)
+        self.assertIsInstance(res, list)
+        for record in res:
+            self.assertIsInstance(record, dict)
+
+    def test_14_compare_fields(self):
+        original = odoo_updates.get_fields('test_original')
+        updated = odoo_updates.get_fields('test_updated')
+        res = odoo_updates.compare_fields(original, updated)
+        validate(res, self.schema)
+        self.assertEquals(len(res['added']), 1)
+        self.assertEquals(len(res['deleted']), 1)
+        self.assertEquals(len(res['updated']), 3)
+        self.assertNotEqual(res['updated'][0]['original'],
+                            res['updated'][0]['modified'])
+        self.assertEquals(res['updated'][0]['model'], 'test_module1')
+        self.assertEquals(res['added'][0]['model'], 'test_module2')
+        self.assertEquals(res['added'][0]['name'], 'test_field_5')
+        self.assertEquals(res['deleted'][0]['model'], 'test_module2')
+        self.assertEquals(res['deleted'][0]['name'], 'test_field_4')
+
+    def test_15_get_fields_diff(self):
+        res = odoo_updates.get_fields_diff('test_original', 'test_updated')
+        validate(res, self.schema)
+        self.assertEquals(len(res['added']), 1)
+        self.assertEquals(len(res['deleted']), 1)
+        self.assertEquals(len(res['updated']), 3)
+        self.assertNotEqual(res['updated'][0]['original'],
+                            res['updated'][0]['modified'])
+        self.assertEquals(res['updated'][0]['model'], 'test_module1')
+        self.assertEquals(res['added'][0]['model'], 'test_module2')
+        self.assertEquals(res['added'][0]['name'], 'test_field_5')
+        self.assertEquals(res['deleted'][0]['model'], 'test_module2')
+        self.assertEquals(res['deleted'][0]['name'], 'test_field_4')
+
+    def test_16_fields_to_screen(self):
+        fields = odoo_updates.get_fields_diff('test_original', 'test_updated')
+        odoo_updates.fields_to_screen(fields, 'test_fields')
+
     def test_99_cleanup(self):
         self.shell.run(shlex.split('dropdb test_original'))
         self.shell.run(shlex.split('dropdb test_updated'))

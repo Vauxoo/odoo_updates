@@ -97,6 +97,33 @@ def get_translations(database):
     return res
 
 
+def get_fields(database):
+    """
+    Selection fields model , name , field_description, ttype,
+    to create a list of fields and their values
+    :param database: database name to query on
+    :return: List of dicts with the information get from database.
+     List of dicts With the information get from the database as follows
+     {'model': model ('ir.model'),
+      'name': field ('field_id'),
+      'description': description ('Fields')
+      'type': data type ('integer')
+      ,}
+     model: Column having the model name
+     name: A column that has the name of the model fields
+     description: column that has the description of the model fields
+     type: column that has the data type of model fields
+    """
+    sql = """
+          select model, name, field_description as description,
+          ttype as type from ir_model_fields;
+          """
+    with PostgresConnector({'dbname': database}) as conn:
+        cursor = conn.execute_select(sql)
+        res = copy_list_dicts(cursor)
+    return res
+
+
 def compare_views(original_views, modified_views):
     """
     Compare all the views from views_prod with the views_updates and returns a proper report
@@ -168,6 +195,57 @@ def compare_translations(original_translations, modified_translations):
                 'module': original_translation['module'],
                 'value': original_translation['value'],
             })
+    return res
+
+
+def compare_fields(original_fields, modified_fields):
+    """
+    compares the fields of tables in a database and returns the direfencias
+    :param original_fields: This would be the fields from the point of
+     view of production database
+    :modified_fields: This are the changes made in the fields of
+    the database, the argument after the -u (-u all, -u app_module).
+    :return: a dict with the added, updated and deleted fields.
+    In the case of updated will return the diff between the org_database
+    and dst_database
+    """
+    res = {
+        'updated': list(), 'added': list(), 'deleted': list(),
+    }
+    records_updates = list()
+    for modified in modified_fields:
+        for original in original_fields:
+            if modified['model'] == original['model']\
+               and modified['name'] == original['name']:
+                if modified['type'] != original['type']\
+                   or modified['description']\
+                   != original['description']:
+                    records_updates.append(original)
+                    records_updates.append(modified)
+                    updated = {'model': original['model'],
+                               'name': original['name'],
+                               'original': {'type': original['type'],
+                                            'description':
+                                            original['description']},
+                               'modified': {'type': modified['type'],
+                                            'description':
+                                            modified['description']},
+                               }
+                    res.get('updated').append(updated)
+    for original in original_fields:
+        if original not in modified_fields and original not in records_updates:
+            res.get('deleted').append(original)
+
+    for modified in modified_fields:
+        if modified not in original_fields and modified not in records_updates:
+            res.get('added').append(modified)
+    return res
+
+
+def get_fields_diff(original_database, modified_database):
+    original_fields = get_fields(original_database)
+    modified_fields = get_fields(modified_database)
+    res = compare_fields(original_fields, modified_fields)
     return res
 
 
@@ -264,6 +342,52 @@ def diff_to_screen(views_states, title):
                     click.secho(line, fg='red')
                 else:
                     click.secho(line)
+
+
+def fields_to_screen(fields_states, title):
+    show_model_field = dict()
+    for state, values in fields_states.iteritems():
+        click.secho('+ {state} {title}'.
+                    format(state=state.title(), title=title), fg='yellow')
+        for field in values:
+            if state == 'updated':
+                diff = {'type': list(difflib.unified_diff(
+                        field['original'].get('type', '').split('\n'),
+                        field['modified'].get('type', '').split('\n'))),
+                        'description': list(difflib.unified_diff(
+                            field['original']
+                            .get('description', '').split('\n'),
+                            field['modified']
+                            .get('description', '').split('\n'))), }
+            else:
+                diff = {'type': field['type'].split('\n'),
+                        'description':
+                            field['description'].split('\n'), }
+            if field.get('model') not in show_model_field:
+                show_model_field[field.get('model')] = []
+                click.secho('+++ {title} {model}'.
+                            format(title='model',
+                                   model=field.get('model')),
+                            fg='yellow')
+            if field.get('name') not in\
+               show_model_field[field.get('model')]:
+                show_model_field[field.get('model')].append(field.get('name'))
+                click.secho('+++ {title} {name}'.
+                            format(title='field name:',
+                                   name=field.get('name')),
+                            fg='yellow')
+
+            for colm in diff:
+                if diff[colm]:
+                    click.secho('++++field {column}'.format(column=colm),
+                                fg='yellow')
+                for line in diff[colm]:
+                    if line.startswith('+'):
+                        click.secho(line, fg='green')
+                    elif line.startswith('-'):
+                        click.secho(line, fg='red')
+                    else:
+                        click.secho(line)
 
 
 def branches_to_screen(branches):
