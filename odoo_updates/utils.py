@@ -22,7 +22,7 @@ def jsonify(states, command, customer_id, instance):
         'customer_id': customer_id,
         'generated_at': datetime.now().strftime("%Y%m%d %H%M%S"),
         'command': command,
-        'parameters': states
+        'result': states
     }
 
     return json.dumps(message, indent=4, sort_keys=True)
