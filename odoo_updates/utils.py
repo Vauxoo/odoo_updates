@@ -10,7 +10,7 @@ import json
 logger = logging.getLogger('deployv')  # pylint: disable=C0103
 
 
-def jsonify(states, command, customer_id):
+def jsonify(states, command, customer_id, instance):
     """
 
     :param command:
@@ -18,6 +18,7 @@ def jsonify(states, command, customer_id):
     :return:
     """
     message = {
+        'instance': instance,
         'customer_id': customer_id,
         'generated_at': datetime.now().strftime("%Y%m%d %H%M%S"),
         'command': command,

@@ -11,13 +11,15 @@ from .. import utils
 @click.option('--screen', '-s', is_flag=True, default=False)
 @click.option('--queue', '-q', envvar='AWS_BRANCH_QUEUE', default=False)
 @click.option('--customer', '-c', envvar='CUSTOMER', required=True)
+@click.option('--instance', '-i', envvar='INSTANCE_TYPE', required=True)
 @click.pass_context
-def cli(ctx, original, updated, screen, queue, customer):
+def cli(ctx, original, updated, screen, queue, customer, instance):
     ctx.obj.update({'original': original})
     ctx.obj['updated'] = updated
     ctx.obj['screen'] = screen
     ctx.obj['queue'] = queue
     ctx.obj['customer'] = customer
+    ctx.obj['instance'] = instance
 
 
 @cli.command()
@@ -27,7 +29,7 @@ def views(ctx):
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(views_states, 'views')
     else:
-        message = utils.jsonify(views_states, 'views', ctx.obj['customer'])
+        message = utils.jsonify(views_states, 'views', ctx.obj['customer'], ctx.obj['instance'])
         utils.send_message(message, ctx.obj['queue'])
 
 
@@ -38,7 +40,7 @@ def menus(ctx):
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(menus_states, 'menus')
     else:
-        message = utils.jsonify(menus_states, 'menus', ctx.obj['customer'])
+        message = utils.jsonify(menus_states, 'menus', ctx.obj['customer'], ctx.obj['instance'])
         utils.send_message(message, ctx.obj['queue'])
 
 
@@ -49,7 +51,7 @@ def branches(ctx):
     if ctx.obj['screen']:
         odoo_updates.branches_to_screen(branches_info)
     else:
-        message = utils.jsonify(branches_info, 'branches', ctx.obj['customer'])
+        message = utils.jsonify(branches_info, 'branches', ctx.obj['customer'], ctx.obj['instance'])
         utils.send_message(message, ctx.obj['queue'])
 
 
@@ -61,7 +63,7 @@ def translations(ctx):
     if ctx.obj['screen']:
         odoo_updates.diff_to_screen(translation_states, 'Translations')
     else:
-        message = utils.jsonify(translation_states, 'translations', ctx.obj['customer'])
+        message = utils.jsonify(translation_states, 'translations', ctx.obj['customer'], ctx.obj['instance'])
         utils.send_message(message, ctx.obj['queue'])
 
 
@@ -73,7 +75,7 @@ def fields(ctx):
     if ctx.obj['screen']:
         odoo_updates.fields_to_screen(fields_states, 'Fields')
     else:
-        message = utils.jsonify(fields_states, 'fields', ctx.obj['customer'])
+        message = utils.jsonify(fields_states, 'fields', ctx.obj['customer'], ctx.obj['instance'])
         utils.send_message(message, ctx.obj['queue'])
 
 
@@ -93,7 +95,7 @@ def getall(ctx):
     states.update({'branches': branches_info})
     states.update({'translations': translation_states})
     states.update({'fields': fields_states})
-    message = utils.jsonify(states, 'getall', ctx.obj['customer'])
+    message = utils.jsonify(states, 'getall', ctx.obj['customer'], ctx.obj['instance'])
     utils.send_message(message, ctx.obj['queue'])
 
 cli(obj={})
