@@ -287,7 +287,7 @@ def get_menus_diff(original_database, modified_database):
         'deleted': list()
     }
 
-    for uxml_id, urecord in modified_menus.iteritems():
+    for uxml_id, urecord in modified_menus.items():
         if uxml_id in original_menus \
                 and original_menus[uxml_id]['name'] != urecord['name']:
             menu = menu_tree(urecord['res_id'], modified_database)
@@ -304,7 +304,7 @@ def get_menus_diff(original_database, modified_database):
                 'name': urecord['name'],
                 'hierarchypath': menu['hierarchypath']
             })
-    for pxml_id, precord in original_menus.iteritems():
+    for pxml_id, precord in original_menus.items():
         if pxml_id not in modified_menus:
             menu = menu_tree(precord['res_id'], original_database)
             res['deleted'].append({

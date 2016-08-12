@@ -56,7 +56,7 @@ class PostgresConnector(object):
     def __init__(self, config=None):
         if config is None:
             config = {}
-        for key, value in config.iteritems():
+        for key, value in config.items():
             if value is not None and key in self.__allowed_keys:
                 self.__str_conn = '%s %s=%s' % (self.__str_conn, key, value)
             elif key == 'dbname' and value is None:
