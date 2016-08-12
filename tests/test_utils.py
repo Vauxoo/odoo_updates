@@ -15,12 +15,13 @@ class TestUtils(TestCase):
 
     def test_01_jsonify(self):
         states = {'added': 1, 'deleted': 2, 'updated': 3}
-        json_res = utils.jsonify(states, 'test', 'test')
+        json_res = utils.jsonify(states, 'test', 'test', 'updates')
         res = json.loads(json_res)
         self.assertIsInstance(res, dict)
         self.assertEquals(res['customer_id'], 'test')
         self.assertEquals(res['command'], 'test')
-        self.assertEquals(res['parameters'], states)
+        self.assertEqual(res['instance'], 'updates')
+        self.assertEquals(res['result'], states)
 
     def test_02_copy_list_dicts(self):
         dict_list = [{'key1': 'val1', 'key2': 'val2'},

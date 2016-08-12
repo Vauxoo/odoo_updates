@@ -10,7 +10,7 @@ import json
 logger = logging.getLogger('deployv')  # pylint: disable=C0103
 
 
-def jsonify(states, command, customer_id):
+def jsonify(states, command, customer_id, instance):
     """
 
     :param command:
@@ -18,10 +18,11 @@ def jsonify(states, command, customer_id):
     :return:
     """
     message = {
+        'instance': instance,
         'customer_id': customer_id,
         'generated_at': datetime.now().strftime("%Y%m%d %H%M%S"),
         'command': command,
-        'parameters': states
+        'result': states
     }
 
     return json.dumps(message, indent=4, sort_keys=True)
@@ -55,7 +56,7 @@ class PostgresConnector(object):
     def __init__(self, config=None):
         if config is None:
             config = {}
-        for key, value in config.iteritems():
+        for key, value in config.items():
             if value is not None and key in self.__allowed_keys:
                 self.__str_conn = '%s %s=%s' % (self.__str_conn, key, value)
             elif key == 'dbname' and value is None:
